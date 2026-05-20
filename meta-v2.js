@@ -907,6 +907,7 @@ window.BMM2_grade = function (task, result, rawQuery) {
 // compares row count + value set against the player's result.
 // ============================================================
 window.BMM2_ANSWERS = {
+  "0.1": "SELECT COUNT(*) FROM Persons",
   "1.1": "SELECT FullName, Age, Occupation FROM Persons WHERE PersonType = 'Guest'",
   "2.1": "SELECT PersonID, AccessTime, AccessType FROM KeycardAccess WHERE RoomID = 103 AND AccessTime BETWEEN '2024-10-20 00:30' AND '2024-10-20 01:30' ORDER BY AccessTime",
   "3.1": "SELECT FromPersonID, Content FROM PhoneRecords WHERE Content LIKE '%ruin%' OR Content LIKE '%lose%'",

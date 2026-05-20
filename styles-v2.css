@@ -470,6 +470,23 @@ input, textarea { user-select: text; }
 }
 .task-card .hint-row button:hover { border-color: var(--accent-gold); color: var(--accent-gold); }
 
+/* Story-first skip — always available so the SQL never blocks the story. */
+#task-skip-story {
+  display: block; width: 100%;
+  margin-top: 8px;
+  background: rgba(184,153,104,0.12);
+  border: 1px solid var(--accent-gold);
+  color: var(--accent-gold);
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.06em;
+  padding: 7px 10px; border-radius: 2px;
+  cursor: pointer;
+}
+#task-skip-story:hover {
+  background: var(--accent-gold);
+  color: var(--bg-deepest);
+}
+
 
 /* ============================================================
    CASE DASHBOARD — fills the board area with two persistent widgets:

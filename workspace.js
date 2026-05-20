@@ -276,9 +276,10 @@ function workspaceShell() {
         <h3 id="task-title">—</h3>
         <p id="task-body">—</p>
         <div class="hint-row">
-          <button id="task-hint">💡 提示 (-5 分)</button>
-          <button id="task-skip-anim" style="opacity: 0.5">跳过 Brennan 台词</button>
+          <button id="task-hint">💡 提示</button>
+          <button id="task-skip-anim" title="跳过台词打字动画">⏩ 台词</button>
         </div>
+        <button id="task-skip-story" title="不想写 SQL？直接看数据、继续故事">⏭ 跳过此题 · 继续故事 →</button>
       </div>
     </section>
 
@@ -990,6 +991,37 @@ function refreshTaskCard() {
     showHint(t.hint);
   };
   document.getElementById("task-skip-anim").onclick = () => window.BMM2_brennan.skip();
+  document.getElementById("task-skip-story").onclick = () => skipTaskForStory();
+}
+
+// ============================================================
+// Story-first skip — this game leads with NARRATIVE; the SQL is
+// optional. Any task can be skipped: the canonical query is run for
+// the player (so they still see the real data + clues), and the story
+// continues exactly as if they had solved it. No score is awarded for
+// a skip, but the full story — Brennan's reaction, rituals, cutscenes
+// — plays out, so a player who writes zero SQL still reads the whole
+// murder mystery start to finish.
+// ============================================================
+function skipTaskForStory() {
+  if (BMM2.awaitingContinue) return;          // a continue-gate is up
+  const t = currentTask();
+  if (!t) return;
+  // Run the canonical answer so the player sees what the query reveals.
+  const ans = window.BMM2_ANSWERS && window.BMM2_ANSWERS[t.id];
+  if (ans && BMM2.db) {
+    try {
+      const safe = window.BMM2_filterQuery
+        ? window.BMM2_filterQuery(ans, BMM2.state) : ans;
+      const results = BMM2.db.exec(safe);
+      const last = results[results.length - 1];
+      if (last && last.values && last.values.length) {
+        showResultPanel(last.columns, last.values);
+        addClues(last.columns, last.values);
+      }
+    } catch (e) { /* canonical failed — story still continues */ }
+  }
+  completeCurrentTask(t, ans || "(skipped)", { skipped: true });
 }
 
 async function speakCurrentIntro() {
@@ -1254,13 +1286,12 @@ function showTutorialPopover(onContinue) {
       </h2>
     </header>
     <div class="modal-body" style="font-family: var(--font-serif); line-height: 1.7; font-size: 15px; color: var(--text-primary);">
-      <p>这就是你的工具。</p>
-      <p>每跑一条 SQL，结果会出现在<b style="color:var(--accent-gold)">底部的结果浮层</b>（你查到的真实数据），并自动归档到左侧的<b style="color:var(--accent-gold)">线索栏</b>——按类型分类（人物/事件/地点/通讯/文档/物证）。</p>
-      <p>中央的<b style="color:var(--accent-gold)">案件概览</b>是你的雷达：七张嫌疑人卡片显示每个人的最新进展和你给他打的标签；下方的<b style="color:var(--accent-gold)">死亡时间窗时间线</b>把所有时间戳事件按发生时间排好——红色 ToD 带是法医估算的关键一小时。</p>
-      <p>点击任何<b style="color:var(--accent-gold)">嫌疑人卡片</b>，会浮出他的完整档案（门禁记录、通话、对话偷听、随章新增）。在档案里给每位嫌疑人打标签：<i>待查 / 怀疑 / 已排除 / 重点嫌疑</i>——你的判断会立刻反映到概览板上。</p>
-      <p>右下角的<b style="color:var(--accent-gold)">侦探笔记</b>随时记你的推理。自动保存。右上角 <b>📁 档案柜</b> 是已完成步骤的回溯。</p>
+      <p><b style="color:var(--accent-gold)">这首先是一个故事。</b>一桩发生在黑木庄园的谋杀案，你会跟着 Brennan 一章章把它读完。</p>
+      <p>每一关有一道 SQL 小题——写对了，你就亲手查到了那条线索。<b style="color:var(--accent-gold)">但写不出来完全不要紧</b>：任务卡上永远有一个「⏭ 跳过此题 · 继续故事」按钮，点它就直接看到数据、听 Brennan 讲这一段，故事照样往下走。<b style="color:var(--accent-gold)">不写一行 SQL，也能读完整个完整的故事。</b></p>
+      <p>看不懂外国人名、忘了有哪些表、想不起前面发生了什么？顶栏的 <b style="color:var(--accent-gold)">📂 案件资料</b> 里有：人物表、数据表、庄园地图、案情进展回顾——随时可查。</p>
+      <p>跑过的查询结果会归档到左侧<b style="color:var(--accent-gold)">线索栏</b>；中央<b style="color:var(--accent-gold)">案件概览</b>显示嫌疑人和进展；点嫌疑人卡片可看完整档案。</p>
       <p style="color: var(--text-secondary); font-style: italic; margin-top: 18px;">
-        Brennan：「数据胜过直觉。开始吧。」
+        Brennan：「慢慢来。重要的不是你查得多快——是你最后看懂了这个故事。」
       </p>
       <div style="text-align: center; margin-top: 22px;">
         <button id="btn-tutorial-continue" style="background: var(--accent-gold); color: var(--bg-deepest); border: none; padding: 10px 32px; cursor: pointer; font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.18em;">继续 →</button>
@@ -1329,22 +1360,32 @@ function brennanReact(text) {
   window.BMM2_brennan.fadeAndType(speech, text, { speed: 24 });
 }
 
-async function completeCurrentTask(t, sql) {
+async function completeCurrentTask(t, sql, opts) {
+  opts = opts || {};
+  const skipped = !!opts.skipped;
   if (!taskDone(t.id)) {
     BMM2.state.completedTasks.push(t.id);
-    addScore(t.rewards?.score || 10);
+    // Skipping (story-first) earns no score — the score rewards SQL effort,
+    // the story is delivered to everyone regardless.
+    if (!skipped) addScore(t.rewards?.score || 10);
   }
   BMM2.state.currentTaskIdx++;
   BMM2.state.queries[t.id] = sql;
   save();
 
-  showToast(`✓ 任务 ${t.id} 完成 · +${t.rewards?.score || 10} 探案分`, "ok");
-  bumpScore();
+  if (skipped) {
+    showToast(`本节已跳过 · 故事继续`, "warn");
+  } else {
+    showToast(`✓ 任务 ${t.id} 完成 · +${t.rewards?.score || 10} 探案分`, "ok");
+    bumpScore();
+  }
   refreshTopbar();
 
   // Gate A — let the player actually LOOK at the query result before
   // Brennan's analysis writes itself out in the right rail.
-  await waitForContinue("查询正确 ✓ 看完下方结果，听 Brennan 分析 →");
+  await waitForContinue(skipped
+    ? "看完下方数据，听 Brennan 讲这一段 →"
+    : "查询正确 ✓ 看完下方结果，听 Brennan 分析 →");
 
   // Brennan reacts
   await speakOutro(t);
