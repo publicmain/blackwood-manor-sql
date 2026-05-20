@@ -1062,6 +1062,9 @@ function skipTaskForStory() {
 async function speakCurrentIntro() {
   const t = currentTask();
   if (!t) return;
+  // Make sure the task card shows THIS task before anything else — the
+  // card must never lag a chapter behind during the cutscene/intro chain.
+  refreshTaskCard();
   // Play scene-before (chapter prologue) if defined and not yet played
   if (window.BMM2_SCENE_BEFORE && window.BMM2_SCENE_BEFORE[t.id]) {
     const sceneId = window.BMM2_SCENE_BEFORE[t.id];
@@ -1072,6 +1075,9 @@ async function speakCurrentIntro() {
       await window.BMM2_playScene(sceneId);
     }
   }
+  // Re-assert after the cutscene closes (the scene veil can leave the
+  // card visually stale on some timing paths).
+  refreshTaskCard();
   const el = document.getElementById("brennan-speech");
   if (!el) return;
   BMM2.brennanDialogActive = true;

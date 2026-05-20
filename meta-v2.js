@@ -845,6 +845,9 @@ window.BMM2_grade = function (task, result, rawQuery) {
       canonRows = null;   // canonical failed — fall back to heuristics below
     }
     if (canonRows) {
+      // (1) Exact row count — this is the hard gate. It rejects
+      //     `SELECT * FROM <wholeTable>` (wrong count) and any over- or
+      //     under-broad WHERE.
       if (rows.length !== canonRows.length) {
         return {
           pass: false,
@@ -852,21 +855,28 @@ window.BMM2_grade = function (task, result, rawQuery) {
                `——再检查 WHERE / JOIN 条件，别用 SELECT * 一次拉全表`
         };
       }
-      // Build the multiset of every value the player's result contains.
+      // (2) Value overlap — confirms the player fetched the RIGHT ROWS,
+      //     while tolerating column choice. We compare distinct value
+      //     sets: the player's result must cover at least half of the
+      //     canonical answer's distinct values. This lets a correct query
+      //     that selects fewer / extra columns, a different ORDER BY, or
+      //     different aliases still pass — but a query that returns the
+      //     wrong rows (low overlap) is still rejected.
       const playerVals = new Set();
       for (const r of rows) for (const c of r) playerVals.add(String(c));
-      for (const r of canonRows) {
-        for (const c of r) {
-          if (!playerVals.has(String(c))) {
-            return {
-              pass: false,
-              why: "行数对了，但结果里缺少关键数据——" +
-                   "检查你查的是不是正确的行、SELECT 的列是否齐全"
-            };
-          }
-        }
+      const canonVals = new Set();
+      for (const r of canonRows) for (const c of r) canonVals.add(String(c));
+      let hit = 0;
+      for (const v of canonVals) if (playerVals.has(v)) hit++;
+      const ratio = canonVals.size ? hit / canonVals.size : 1;
+      if (ratio < 0.5) {
+        return {
+          pass: false,
+          why: "行数对了，但查到的好像不是正确的那些行——" +
+               "再检查一下 WHERE / JOIN 条件"
+        };
       }
-      return { pass: true, why: "查询命中——结果与标准答案一致" };
+      return { pass: true, why: "查询命中——结果正确" };
     }
   }
 
