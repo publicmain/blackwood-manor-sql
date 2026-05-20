@@ -61,11 +61,12 @@ WHERE PersonType = '...';`,
 应返回 2 行——一进一出。`,
     starter: `-- ToD 窗口：00:30 – 01:30
 -- 谁的卡片碰过书房 (RoomID = 103) 读卡器？
+-- 注意：时间要写完整日期，格式 '2024-10-20 00:30'
 
 SELECT PersonID, AccessTime, AccessType
 FROM KeycardAccess
 WHERE RoomID = ___
-  AND AccessTime BETWEEN '___' AND '___'
+  AND AccessTime BETWEEN '2024-10-20 ___' AND '2024-10-20 ___'
 ORDER BY AccessTime;`,
     brennanIntro:
 `法医刚把死亡时间窗锁在凌晨零点半到一点半。一小时。
@@ -530,12 +531,13 @@ WHERE p.PersonType = '___'
 WHERE k.AccessTime BETWEEN '2024-10-20 00:30' AND '2024-10-20 01:30'
 JOIN Persons + Rooms，ORDER BY AccessTime。`,
     starter: `-- ToD 窗口内的每一条门禁。谁在哪个房间？
+-- 时间要写完整日期，格式 '2024-10-20 00:30'
 
 SELECT p.FullName, r.Name AS Room, k.AccessTime, k.AccessType
 FROM KeycardAccess k
 JOIN Persons p ON p.PersonID = k.PersonID
 JOIN Rooms   r ON r.RoomID   = k.RoomID
-WHERE k.AccessTime BETWEEN '___' AND '___'
+WHERE k.AccessTime BETWEEN '2024-10-20 ___' AND '2024-10-20 ___'
 ORDER BY k.AccessTime;`,
     brennanIntro:
 `8.3 给了我两个断网的人。光靠"没上网"我定不了谁。

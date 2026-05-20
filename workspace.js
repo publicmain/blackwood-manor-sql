@@ -1533,18 +1533,21 @@ async function completeCurrentTask(t, sql, opts) {
     ? "看完下方数据，听 Brennan 讲这一段 →"
     : "查询正确 ✓ 看完下方结果，听 Brennan 分析 →");
 
-  // Brennan reacts
-  await speakOutro(t);
-
-  // Gate B — NOTHING auto-chains into the next chapter or cutscene.
-  // The player reads Brennan's reaction, then clicks 继续调查 when ready.
-  // For Ch0.1 the onboarding modal itself is the gate (its own 继续 button).
+  // Brennan reacts + Gate B. The outro types AND the 继续 gate appears at
+  // the same time — clicking the gate fast-forwards the typewriter, so the
+  // player never has to hunt for a separate "skip animation" button.
   if (t.id === "0.1" && !BMM2.state.tutorialShown) {
+    await speakOutro(t);
     BMM2.state.tutorialShown = true;
     save();
     await showTutorialPopoverAsync();
   } else {
+    const outroDone = speakOutro(t);
     await waitForContinue("继续调查 →");
+    if (window.BMM2_brennan && window.BMM2_brennan.skip) {
+      window.BMM2_brennan.skip();   // jump any still-running typewriter to the end
+    }
+    await outroDone;
   }
 
   // Trigger ritual if any

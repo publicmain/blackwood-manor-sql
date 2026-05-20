@@ -1795,8 +1795,10 @@ input, textarea { user-select: text; }
   width: 100%;
   /* The source cutscenes are all 1672x941 (16:9). aspect-ratio locks the
      box, so width = card width, height auto-computes — no stretching, no
-     cropping into a strip. Letterbox fallback uses 'contain' for safety. */
+     cropping into a strip. max-height caps it on short viewports / long
+     scenes so the prose + 继续 button always stay in view. */
   aspect-ratio: 16 / 9;
+  max-height: 42vh;
   overflow: hidden;
   flex-shrink: 0;
 }

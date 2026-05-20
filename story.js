@@ -579,7 +579,13 @@
         closed = true;
         window.removeEventListener("keydown", onKey);
         veil.classList.remove("open");
-        setTimeout(() => { veil.remove(); resolve(); }, 320);
+        setTimeout(() => {
+          veil.remove();
+          // Keep the task card in sync — a chapter-close cutscene can
+          // otherwise leave it showing the just-finished task.
+          if (window.refreshTaskCard) window.refreshTaskCard();
+          resolve();
+        }, 320);
       }
       function renderAll() {
         text.innerHTML = paragraphs.map(p => `<p>${esc(p)}</p>`).join("");
