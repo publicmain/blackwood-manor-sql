@@ -267,7 +267,7 @@
     },
 
     // ================================================================
-    // OPENING PROLOGUE — 6-beat cinematic sequence played before workspace
+    // OPENING PROLOGUE — 7-beat cinematic sequence played before workspace
     // ================================================================
     "prologue_01_manor": {
       photo: "portraits/Manor.png",
@@ -351,6 +351,27 @@
         `「年纪？嗯。是有点轻。」`,
         `他看向窗外。`,
         `「但他们对 SQL 的理解，比这庄园里任何人都靠得住。」`
+      ]
+    },
+    "prologue_07_briefing": {
+      photo: "cutscenes/S06-brennan-desk.jpg",
+      photoCaption: "案情简报 · 你的位置：临时指挥台",
+      paragraphs: [
+        `在你坐下之前——先把这桩案子听清楚。别急着查，先弄明白我们在查什么。`,
+        `死者：Elias Blackwood，六十七岁。三度获奖的小说家，这座庄园的主人。`,
+        `昨天，十月十九号，是黑木文学奖的颁奖夜。宾客们为他举杯。今天清晨，他被发现死在自己的书房里——头部遭钝器击打，凶器是他书桌上那只青铜书挡。`,
+        `法医给出的死亡时间，是今天凌晨 00:30 到 01:30 之间。整整一小时。没有目击者。`,
+        `案发当晚，庄园里一共住着十二个人：七位受邀的宾客，五名常驻的员工。他们每一个，都认识 Elias。`,
+        `书房门没有被撬，屋里没有打斗的痕迹。换句话说——开门让凶手进来的，是 Elias 本人。`,
+        `所以凶手不是外人。凶手，就在这十二个人里。`,
+        `好消息是：这座庄园什么都记得。`,
+        `门禁读卡器记下了每一次刷卡，Wi-Fi 记下了每个人的手机连过哪个房间，酒窖、监控、电话短信、晚宴座次……昨晚的每一道痕迹，此刻都躺在这台服务器的硬盘里。`,
+        `坏消息是：那是一个数据库。成千上万行记录堆在一起，它不会自己开口。`,
+        `这就是我把你请来的原因。`,
+        `我不需要你去审问谁，也不需要你翻窗、找指纹。你只要做一件事：向这个数据库提问——用 SQL。`,
+        `我会一步一步告诉你：这一关要问什么、为什么要这么问、问出来的答案说明了什么。你负责把问题写成查询，数据库负责回答。`,
+        `我们一起，把这十二个人一个一个排除掉，直到只剩下一个。这就是接下来要做的全部事情。`,
+        `这是你的终端，这是案件的数据库。第一个问题很简单，跟我来。`
       ]
     },
 
@@ -533,7 +554,7 @@
   // ============================================================
   // Renderer — full-screen serif overlay, typewriter per paragraph
   // ============================================================
-  // When the player skips a multi-scene run (the 6-beat opening prologue, or
+  // When the player skips a multi-scene run (the 7-beat opening prologue, or
   // a mid-game A→B chain), this aborts every remaining scene in the run.
   let __abortSequence = false;
 
@@ -595,7 +616,7 @@
       btn.addEventListener("click", () => { if (!btn.disabled) close(); });
       skip.addEventListener("click", () => {
         if (inSequence) {
-          // One click skips the WHOLE run (e.g. all 6 prologue beats).
+          // One click skips the WHOLE run (e.g. all 7 prologue beats).
           __abortSequence = true;
           close();
         } else {
@@ -679,7 +700,7 @@
     __abortSequence = false;
   }
 
-  // Convenience: the full opening prologue sequence (6 beats).
+  // Convenience: the full opening prologue sequence (7 beats).
   // Called by workspace.js after the Brennan splash monologue.
   const OPENING_PROLOGUE = [
     "prologue_01_manor",
@@ -687,7 +708,8 @@
     "prologue_03_discovery",
     "prologue_04_study",
     "prologue_05_brennan",
-    "prologue_06_command"
+    "prologue_06_command",
+    "prologue_07_briefing"
   ];
   function playOpeningPrologue() {
     return playSceneSequence(OPENING_PROLOGUE);

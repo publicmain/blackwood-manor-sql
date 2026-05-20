@@ -195,6 +195,7 @@ function mountWorkspace() {
   bindLeftRail();
   bindTerminal();
   bindRightRail();
+  initPersonHoverCard();   // hover cards over names in Brennan's dialogue
 
   // First run: pick a difficulty, THEN meet the cast. On later runs both
   // are skipped (flags persisted in state).
@@ -317,10 +318,6 @@ function workspaceShell() {
         <div class="brennan-actions">
           <button id="btn-dialogue-history">完整对话历史</button>
         </div>
-      </div>
-      <div class="notes-block">
-        <h3>侦探笔记 <button id="btn-export-notes">导出 .txt</button></h3>
-        <textarea id="notes-area" placeholder="把你的推理写在这里..."></textarea>
       </div>
     </aside>
 
@@ -499,6 +496,80 @@ const CASEFILE_CAST = {
   ]
 };
 
+// Flat PersonID → cast entry lookup (used by hover cards & dossiers).
+const CASEFILE_BY_PID = {};
+for (const grp of Object.values(CASEFILE_CAST)) {
+  for (const p of grp) CASEFILE_BY_PID[p.pid] = p;
+}
+
+// Rich Chinese biographies shown in the dossier (openSuspectModal).
+// SPOILER RULE: surface personas only — no blood-link, no plagiarism,
+// no hint at who the killer is. These read like a pre-investigation
+// case file, not the solution.
+const PERSON_BIO = {
+  1: `伊莱亚斯·布莱克伍德，六十七岁，英国当代最负盛名的小说家之一，曾三度入围布克奖。二十六岁那年，他凭长篇《沉默时刻》一举成名，从此奠定文坛地位——后来设立的黑木文学奖，正是以他的姓氏命名。
+他出身 Cotswolds 的旧式家庭，年少时与妹妹玛格丽特一同在这座庄园长大。成名之后，他以严苛、骄傲、难以亲近著称：编辑、经纪人、后辈作家，几乎没人能轻易走近他。
+近两年他不再发表新作，转而埋头写一部回忆录。书房那台笔记本电脑上的文档，停在了第七章。`,
+
+  2: `薇薇安·阿什福德，伊莱亚斯的第一任妻子。黑木庄园原本属于阿什福德家族，是她带进这桩婚姻的嫁妆。
+两人于 2016 年离婚，但按照离婚协议，薇薇安保留了庄园的终身居住权——前提是她一直住在这里。于是离婚之后，她依旧像女主人一样打理着这座庄园：安排晚宴、照看花园、管束仆役。
+外人很难看清她对这段早已结束的婚姻究竟是怨还是恋。唯一确定的是，她最害怕的，是有朝一日被请出这扇大门。`,
+
+  3: `索菲娅·布莱克伍德，伊莱亚斯的第二任妻子。她原是出版社的资深编辑，伊莱亚斯近十年的几部作品，都曾经她的手打磨成形。
+两人于 2020 年结婚，外界议论颇多——她比他年轻许多。婚前协议的条款相当苛刻：若这段婚姻在伊莱亚斯生前破裂，她几乎将一无所获。
+婚后她逐渐淡出编辑行业，全心扮演"作家妻子"的角色。但熟悉她的人都说，索菲娅从来不是甘心站在别人光环背后的人。`,
+
+  4: `马库斯·索恩，与伊莱亚斯·布莱克伍德合作了整整二十二年的文学经纪人。从《沉默时刻》起，他便一路替伊莱亚斯打理合同、版税与版权，两人的事业几乎是绑在一起长大的。
+然而近几年马库斯过得并不顺：一场离婚、长期酗酒、几位重要客户相继离去，让他的经纪公司摇摇欲坠。
+如果连伊莱亚斯也决定与他解约，他多年苦心经营的一切，恐怕会在一夜之间崩塌。`,
+
+  5: `艾莉丝·陈，年轻一代中最受瞩目的新锐作家，2023 年黑木文学奖得主。
+她安静、寡言，在喧嚷的文学圈里几乎隐形，却被不少评论家视为伊莱亚斯之后最具分量的接班人。她对伊莱亚斯怀着近乎虔诚的敬意，曾反复借阅、研读他的成名作《沉默时刻》。
+这个周末她受邀回到庄园领奖，却比任何人都更少出现在客厅与宴会厅。`,
+
+  6: `朱利安·哈特利，与伊莱亚斯同辈的小说家，也是他公认的文坛宿敌。两人几乎在同一年出道，此后三十年被反复拿来比较。
+黑木文学奖设立以来，朱利安连续三年止步亚军。2023 年，他的妻子病逝，此后他变得愈发沉默而尖锐。
+他从不掩饰自己对伊莱亚斯的轻蔑——也从不掩饰，自己有多想赢下哪怕一次。`,
+
+  7: `埃莉诺·赖特，四十四岁，伊莱亚斯亲自授权的传记作者。她毕业于剑桥三一学院，治学严谨，以擅长梳理庞杂的史料著称。
+过去三年，她几乎住进了黑木庄园，逐字逐句地整理伊莱亚斯的书信、手稿与人生。她沉静、专注，对细节有着近乎执拗的认真——同一段往事，她总要反复核对到完全确凿，才肯落笔。
+这部传记原定本周末随颁奖礼一同公布，是她三年心血的句点。`,
+
+  8: `亨里克·沃尔科夫，俄裔文学评论家，以言辞犀利、毫不留情著称。他的书评是许多作家的噩梦——而伊莱亚斯近四部小说，几乎被他逐一贬得体无完肤。
+两人在公开场合多次交锋，私下据说也早已积怨。亨里克坚持认为，真正的批评不该顾及情面。
+他这次受邀出席颁奖礼，本身就让不少人感到意外。`,
+
+  9: `艾琳·霍奇太太，黑木庄园的女管家，在这里已工作二十余年。庄园里大小事务、宾客起居，都归她照料。
+她有一个多年的习惯——随身带着一本小笔记本，记下当天庄园里发生的事、听到的话。她说这是为了不出差错；但宾客们大多并不知道，自己随口的一句话，可能就被记进了那本本子里。`,
+
+  10: `阿尔伯特·彭伯顿，黑木庄园的男管家，做事一丝不苟。除了迎送宾客、打理门厅，他还兼管着庄园那套并不算新的安保系统——门禁读卡器、各处的监控摄像头，都由他维护。
+哪扇门在什么时间被刷过、哪个房间装没装监控，这些事，他比庄园里任何人都清楚。`,
+
+  11: `安东·沃尔科夫，黑木庄园的园丁，沉默而勤恳，常常天还没亮就在花园里忙碌。
+他是评论家亨里克·沃尔科夫的儿子，但父子俩多年来形同陌路，几乎不再往来。他选择在远离文学圈的庄园里做一名园丁——这本身，或许就是一种回答。`,
+
+  12: `皮埃尔·杜布瓦，法国主厨，黑木庄园重要宴席的掌勺人。这个周末的颁奖晚宴正是由他一手操办，从菜单到上菜次序都亲自把关。
+他大半时间都在厨房与宴会厅之间往返，当晚谁坐在哪、谁动过什么，往往都看在他眼里。`,
+
+  13: `萨拉·惠特科姆，伊莱亚斯·布莱克伍德的私人秘书，已为他工作三年。她替伊莱亚斯打理日程、信件与书房事务，每周日上午都会准时把报纸与早餐送到书房门口。
+正是她，在那个周日清晨推开了书房的门——成为最早发现伊莱亚斯遇害的人。`,
+
+  14: `玛格丽特·布莱克伍德，伊莱亚斯的妹妹，比他小几岁。她自幼在黑木庄园长大，和哥哥一样热爱文学，年轻时也怀着成为作家的抱负，写下过不少作品。
+然而她的人生在 1986 年戛然而止——那一年她二十二岁，选择结束了自己的生命。家族对她的离世讳莫如深，多年来，很少有人在庄园里提起她的名字。`,
+
+  15: `查尔斯·布莱克伍德，伊莱亚斯与玛格丽特的父亲，老一辈的布莱克伍德家主。他治家严厉，极重家族颜面，是那个年代典型的旧式英国家长。
+他在世时极少在公开场合谈及家中私事，许多旧事，也随他一同沉入了沉默。`,
+
+  16: `亨丽埃塔·布莱克伍德，伊莱亚斯与玛格丽特的母亲。她出身体面人家，一生操持着黑木庄园的内务。
+关于她的记载不多——在那个年代，家族的女主人往往隐没在丈夫与子女的身影之后。`,
+
+  17: `罗伯特·赖特，埃莉诺·赖特法律意义上的父亲。他是一位低调的乡村教师，与妻子帕特里夏一同把埃莉诺抚养成人。
+他一生重视教育，埃莉诺日后能考入剑桥，与他早年的督促分不开。`,
+
+  18: `帕特里夏·赖特，埃莉诺·赖特法律意义上的母亲。她温和持家，与丈夫罗伯特一起，给了埃莉诺一个安静的成长环境。
+她为人低调，把一生的心力都给了这个家。`
+};
+
 // table → {中文名, 用途}. Columns are read live via PRAGMA table_info.
 const CASEFILE_TABLES = [
   ["Persons",            "人物档案",   "庄园里每个人的基本信息：姓名、年龄、身份、与死者的关系、所住房间。"],
@@ -569,7 +640,7 @@ function renderCaseFileTab(tab) {
   body.querySelectorAll("[data-person]").forEach(el => {
     el.addEventListener("click", () => {
       const pid = parseInt(el.dataset.person, 10);
-      if (pid) openSuspectModal(pid);
+      if (pid) openSuspectModal(pid, true);
     });
   });
 }
@@ -669,33 +740,94 @@ function bindCaseFileTables(body) {
   });
 }
 
-function caseFileMapHTML() {
-  let rooms = [];
-  try {
-    const res = BMM2.db.exec("SELECT RoomID, Name, Wing, Floor, HasCCTV FROM Rooms ORDER BY Floor DESC, RoomID");
-    rooms = (res[0] && res[0].values) ? res[0].values : [];
-  } catch (e) { return `<p class="cf-intro">无法读取房间数据。</p>`; }
-  const floors = {};
-  for (const [rid, name, wing, floor, cctv] of rooms) {
-    (floors[floor] = floors[floor] || []).push({ rid, name, wing, cctv });
+// Hand-laid manor floor plan. Each room is placed on a CSS grid so the
+// map reads like a real architectural plan, not a flat list.
+//   c = grid column start, r = row start, cw = column span, rw = row span
+//   kind: "room" | "corridor" | "stair"
+const MANOR_FLOORPLAN = {
+  3: {
+    name: "三楼 · 宾客层", cols: 6,
+    desc: "七名嫌疑人就住在这一层的客房里。",
+    rooms: [
+      { rid: 604, zh: "宾客区走廊",        c: 1, r: 1, cw: 6, kind: "corridor" },
+      { rid: 301, zh: "客房 · 马库斯·索恩",  c: 1, r: 2 },
+      { rid: 302, zh: "客房 · 艾莉丝·陈",    c: 2, r: 2 },
+      { rid: 303, zh: "客房 · 朱利安·哈特利", c: 3, r: 2 },
+      { rid: 304, zh: "客房 · 埃莉诺·赖特",  c: 4, r: 2 },
+      { rid: 305, zh: "客房 · 亨里克·沃尔科夫", c: 5, r: 2 }
+    ]
+  },
+  2: {
+    name: "二楼 · 案发楼层", cols: 6,
+    desc: "凶案发生在书房（103）。红色标出的，是案发现场以及与它相邻的房间——书房、档案室，和它们之间的那道连接门。",
+    rooms: [
+      { rid: 603, zh: "西翼走廊",  c: 1, r: 1, cw: 2, kind: "corridor" },
+      { rid: 602, zh: "东翼走廊",  c: 3, r: 1, cw: 4, kind: "corridor" },
+      { rid: 201, zh: "阿什福德套房 · 薇薇安", c: 1, r: 2, cw: 2 },
+      { rid: 405, zh: "档案室",    c: 3, r: 2, crime: true },
+      { rid: 406, zh: "连接门",    c: 4, r: 2, crime: true, kind: "door" },
+      { rid: 103, zh: "书房 · 案发现场", c: 5, r: 2, crime: true },
+      { rid: 101, zh: "主人套房 · 伊莱亚斯", c: 6, r: 2 },
+      { rid: 102, zh: "主人配房 · 索菲娅",   c: 6, r: 3 }
+    ]
+  },
+  1: {
+    name: "一楼 · 公共区域", cols: 4,
+    desc: "晚宴、酒会都在这一层。",
+    rooms: [
+      { rid: 601, zh: "正厅",     c: 1, r: 1, cw: 2 },
+      { rid: 403, zh: "宴会厅",   c: 3, r: 1 },
+      { rid: 402, zh: "厨房",     c: 4, r: 1 },
+      { rid: 105, zh: "客厅",     c: 1, r: 2 },
+      { rid: 104, zh: "图书馆",   c: 2, r: 2 },
+      { rid: 404, zh: "温室",     c: 3, r: 2, cw: 2 },
+      { rid: 502, zh: "仆役区",   c: 1, r: 3 },
+      { rid: 501, zh: "花园小屋", c: 3, r: 3, cw: 2 }
+    ]
+  },
+  "-1": {
+    name: "地下 · 酒窖层", cols: 3,
+    desc: "恒温 13 度。深夜正常没人下来。",
+    rooms: [
+      { rid: 401, zh: "酒窖", c: 2, r: 1 }
+    ]
   }
-  const floorName = f =>
-    f >= 3 ? "三楼 · 宾客客房" :
-    f === 2 ? "二楼 · 主人区 / 东翼 / 西翼" :
-    f === 1 ? "一楼 · 公共区域" : "地下 · 酒窖";
-  // crime-scene cluster: Study 103, Archive 405, connecting door 406
-  const crime = new Set([103, 405, 406]);
-  let html = `<p class="cf-intro">案发夜的舞台。<b style="color:var(--accent-blood-2)">红色房间</b>是案发核心：书房、档案室、以及连接两者、没有监控的那扇门。🎥 = 有监控，🚫 = 无监控盲区。</p>`;
-  for (const f of Object.keys(floors).sort((a, b) => b - a)) {
-    html += `<div class="cf-floor"><div class="cf-floor-name">${esc(floorName(parseInt(f, 10)))}</div><div class="cf-floor-rooms">`;
-    for (const room of floors[f]) {
-      const isCrime = crime.has(room.rid);
-      html += `
-        <div class="cf-room ${isCrime ? "is-crime" : ""}">
-          <div class="cf-room-id">#${room.rid}</div>
-          <div class="cf-room-name">${esc(room.name)}</div>
-          <div class="cf-room-meta">${esc(room.wing)} · ${room.cctv ? "🎥 有监控" : "🚫 监控盲区"}</div>
-        </div>`;
+};
+
+function caseFileMapHTML() {
+  // CCTV status straight from the DB so the map stays accurate.
+  const cctv = {};
+  try {
+    const res = BMM2.db.exec("SELECT RoomID, HasCCTV FROM Rooms");
+    for (const [rid, has] of (res[0] ? res[0].values : [])) cctv[rid] = has;
+  } catch (e) { /* fall back to no-cctv */ }
+
+  let html = `<p class="cf-intro">黑木庄园平面图。<b style="color:var(--accent-blood-2)">红色</b>标出案发现场及与它相邻的房间。
+    🎥 = 该房间装有监控，🚫 = 监控盲区。后面几章查门禁、查走廊时，对照这张图看会清楚很多。</p>`;
+
+  for (const fk of ["3", "2", "1", "-1"]) {
+    const fl = MANOR_FLOORPLAN[fk];
+    if (!fl) continue;
+    html += `<div class="cf-floor">
+      <div class="cf-floor-name">${esc(fl.name)}</div>
+      <div class="cf-floor-desc">${esc(fl.desc)}</div>
+      <div class="cf-plan" style="grid-template-columns: repeat(${fl.cols}, 1fr);">`;
+    for (const room of fl.rooms) {
+      const cw = room.cw || 1, rw = room.rw || 1;
+      const hasCctv = cctv[room.rid];
+      const cls = ["cf-cell"];
+      if (room.kind === "corridor") cls.push("is-corridor");
+      else if (room.kind === "door") cls.push("is-door");
+      if (room.crime) cls.push("is-crime");
+      const meta = room.kind === "corridor" ? "走廊"
+        : room.kind === "door" ? "🚫 监控盲区"
+        : (hasCctv ? "🎥 有监控" : "🚫 监控盲区");
+      html += `<div class="${cls.join(" ")}"
+        style="grid-column:${room.c} / span ${cw}; grid-row:${room.r} / span ${rw};">
+        <div class="cf-cell-id">#${room.rid}</div>
+        <div class="cf-cell-name">${esc(room.zh)}</div>
+        <div class="cf-cell-meta">${meta}</div>
+      </div>`;
     }
     html += `</div></div>`;
   }
@@ -1140,7 +1272,11 @@ function archiveCurrentBubble() {
     </div>
     <div class="log-card-body"></div>
   `;
-  card.querySelector(".log-card-body").textContent = txt;
+  // Copy markup (keeps **bold** + .person-ref hover spans); fall back to text.
+  const bodyEl = card.querySelector(".log-card-body");
+  const snap = speech.cloneNode(true);
+  snap.querySelectorAll(".caret").forEach(c => c.remove());
+  bodyEl.innerHTML = snap.innerHTML || txt;
   log.insertBefore(card, log.firstChild);
   // Keep only the most recent 6 archived beats; older ones drop off
   while (log.children.length > 6) log.removeChild(log.lastChild);
@@ -1628,8 +1764,22 @@ function waitForContinue(label) {
     btn.textContent = label || "继续调查 →";
     bar.appendChild(btn);
 
+    // Keep the gate ABOVE the result panel so it never covers query rows.
+    // When no result panel is open, fall back to the CSS default (just
+    // above the terminal).
+    function placeGate() {
+      const rp = document.getElementById("result-panel");
+      if (rp && rp.classList.contains("open")) {
+        const top = rp.getBoundingClientRect().top;
+        bar.style.bottom = Math.round(window.innerHeight - top + 12) + "px";
+      } else {
+        bar.style.bottom = "";
+      }
+    }
+
     function finish() {
       window.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", placeGate);
       BMM2.awaitingContinue = false;
       if (runBtn) runBtn.disabled = false;
       if (skipBtn) skipBtn.disabled = false;
@@ -1647,7 +1797,10 @@ function waitForContinue(label) {
     }
     btn.addEventListener("click", finish, { once: true });
     window.addEventListener("keydown", onKey);
+    window.addEventListener("resize", placeGate);
     document.body.appendChild(bar);
+    placeGate();
+    setTimeout(placeGate, 360);   // re-measure after the panel's slide-in
   });
 }
 
@@ -1658,24 +1811,11 @@ function addScore(delta) {
 }
 
 // ============================================================
-// RIGHT RAIL — notes + dialogue history
+// RIGHT RAIL — dialogue history
 // ============================================================
 function bindRightRail() {
-  const ta = document.getElementById("notes-area");
-  ta.value = BMM2.state.notes || "";
-  let t;
-  ta.addEventListener("input", () => {
-    BMM2.state.notes = ta.value;
-    clearTimeout(t); t = setTimeout(save, 600);
-  });
-  document.getElementById("btn-export-notes").addEventListener("click", () => {
-    const blob = new Blob([BMM2.state.notes || ""], { type: "text/plain;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `bmm-detective-notes-${Date.now()}.txt`;
-    a.click();
-  });
-  document.getElementById("btn-dialogue-history").addEventListener("click", openDialogueHistory);
+  const hist = document.getElementById("btn-dialogue-history");
+  if (hist) hist.addEventListener("click", openDialogueHistory);
 }
 
 function openDialogueHistory() {
@@ -1724,7 +1864,70 @@ function clueDetailTable(clue) {
   </table>`;
 }
 
-function openSuspectModal(pid) {
+// ============================================================
+// Person hover card — floating mini-dossier shown when the player
+// hovers a Chinese name (.person-ref span) inside Brennan's dialogue.
+// Clicking the name opens the full dossier.
+// ============================================================
+let _personHoverCardEl = null;
+function initPersonHoverCard() {
+  if (_personHoverCardEl) return;
+  const card = document.createElement("div");
+  card.className = "person-hover-card";
+  card.style.display = "none";
+  document.body.appendChild(card);
+  _personHoverCardEl = card;
+
+  function place(ref) {
+    const r = ref.getBoundingClientRect();
+    const cw = card.offsetWidth || 280;
+    const chh = card.offsetHeight || 110;
+    let left = r.left + r.width / 2 - cw / 2;
+    let top = r.top - chh - 10;
+    if (top < 8) top = r.bottom + 10;   // flip below if no room above
+    left = Math.max(8, Math.min(left, window.innerWidth - cw - 8));
+    card.style.left = left + "px";
+    card.style.top = top + "px";
+  }
+  function show(ref) {
+    const pid = parseInt(ref.getAttribute("data-pid"), 10);
+    const p = CASEFILE_BY_PID[pid];
+    if (!p) return;
+    const photo = window.BMM_photoPath ? window.BMM_photoPath(pid) : null;
+    const photoEl = photo
+      ? `<img src="${photo}" alt="" loading="lazy" decoding="async"/>`
+      : `<div class="phc-ph">${esc(p.en.charAt(0))}</div>`;
+    card.innerHTML = `
+      <div class="phc-photo">${photoEl}</div>
+      <div class="phc-body">
+        <div class="phc-zh">${esc(p.zh)}</div>
+        <div class="phc-en">${esc(p.en)}</div>
+        <div class="phc-role">${esc(p.role || "")}</div>
+        <div class="phc-hook">${esc(p.hook || "")}</div>
+      </div>`;
+    card.style.display = "flex";
+    place(ref);
+  }
+  function hide() { card.style.display = "none"; }
+
+  document.addEventListener("mouseover", e => {
+    const ref = e.target.closest && e.target.closest(".person-ref");
+    if (ref) show(ref);
+  });
+  document.addEventListener("mouseout", e => {
+    const ref = e.target.closest && e.target.closest(".person-ref");
+    if (ref) hide();
+  });
+  document.addEventListener("click", e => {
+    const ref = e.target.closest && e.target.closest(".person-ref");
+    if (ref) {
+      const pid = parseInt(ref.getAttribute("data-pid"), 10);
+      if (pid) { hide(); openSuspectModal(pid); }
+    }
+  });
+}
+
+function openSuspectModal(pid, fromCaseFile) {
   const row = runRows(`SELECT FullName, Age, Occupation, RelationToElias, RoomID, BirthYear, DeathYear, Notes FROM Persons WHERE PersonID=${pid}`)[0];
   if (!row) return;
   const [name, age, occ, rel, roomId, birth, death, notes] = row;
@@ -1733,6 +1936,14 @@ function openSuspectModal(pid) {
   const photo = window.BMM_photoPath ? window.BMM_photoPath(pid) : null;
   const mark = (BMM2.state.marks || {})["person_" + pid] || "unknown";
   const ch7 = chDone(7);
+  // Rich Chinese biography + a short header tagline.
+  const cast = CASEFILE_BY_PID[pid];
+  const bioText = PERSON_BIO[pid] || notes || "";
+  const bioHTML = bioText.split(/\n+/).map(s => s.trim()).filter(Boolean)
+    .map(s => `<p>${esc(s)}</p>`).join("");
+  const tagline = (cast && cast.zh ? cast.zh + " · " : "") + (cast && cast.role ? cast.role : "");
+  // When opened from the Case File, "×" should return there, not the desk.
+  const back = fromCaseFile ? () => openCaseFile("cast") : closeModal;
 
   // Evidence sections (chapter-gated)
   const ev = [];
@@ -1754,7 +1965,7 @@ function openSuspectModal(pid) {
       <div class="suspect-modal-info">
         <h2>${esc(name)}</h2>
         <div class="meta">${age ? age + " 岁 · " : ""}${esc(occ || "—")} · Room ${roomId ?? "—"}</div>
-        <div class="desc">${esc(notes || "")}</div>
+        <div class="desc">${esc(tagline || notes || "")}</div>
         <div class="actions">
           <select id="mark-select">
             <option value="unknown" ${mark==="unknown"?"selected":""}>待查</option>
@@ -1768,6 +1979,10 @@ function openSuspectModal(pid) {
       <span class="close">×</span>
     </header>
     <div class="modal-body">
+      ${bioHTML ? `
+        <div class="section-title">人物背景</div>
+        <div class="suspect-bio">${bioHTML}</div>
+      ` : ""}
       ${ev.map(([label, items]) => `
         <div class="section-title">${esc(label)} (${items.length})</div>
         ${items.length ? items.map(t => `<div class="ev-line"><span class="t">${highlight(esc(t.split(" · ")[0]))}</span>${highlight(esc(t.split(" · ").slice(1).join(" · ")))}</div>`).join("") : `<div class="ev-line locked">（无记录）</div>`}
@@ -1787,8 +2002,8 @@ function openSuspectModal(pid) {
     </div>
   `;
   veil.classList.add("open");
-  m.querySelector(".close").addEventListener("click", closeModal);
-  veil.addEventListener("click", e => { if (e.target === veil) closeModal(); });
+  m.querySelector(".close").addEventListener("click", back);
+  veil.addEventListener("click", e => { if (e.target === veil) back(); });
   m.querySelector("#mark-select").addEventListener("change", e => {
     BMM2.state.marks = BMM2.state.marks || {};
     BMM2.state.marks["person_" + pid] = e.target.value;
