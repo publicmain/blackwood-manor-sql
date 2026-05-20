@@ -186,7 +186,7 @@ function mountWorkspace() {
 
   // Restore clues (re-render rows already gathered)
   restoreClues();
-  renderDashboard();   // case dashboard: suspect strip + ToD timeline
+  renderDashboard();   // case dashboard: suspect strip + progress glance
   refreshTaskCard();
   refreshTopbar();
 
@@ -195,6 +195,14 @@ function mountWorkspace() {
   bindLeftRail();
   bindTerminal();
   bindRightRail();
+
+  // First time into the workspace — show the 登场人物 briefing so the
+  // player meets the cast before facing a wall of foreign names.
+  if (!BMM2.state.castShown) {
+    BMM2.state.castShown = true;
+    save();
+    setTimeout(() => openCaseFile("cast"), 450);
+  }
 
   // Start the dialogue queue from current task
   speakCurrentIntro();
@@ -210,6 +218,7 @@ function workspaceShell() {
       </div>
       <div class="score">探案分 <span class="num" id="score-num">0</span></div>
       <div class="tools">
+        <button id="btn-casefile" title="案件资料：人物 / 数据表 / 庄园地图 / 案情进展">📂 案件资料</button>
         <button id="btn-drawer" title="档案柜">📁 档案柜</button>
         <button id="btn-help" title="案件简介与操作帮助">ⓘ</button>
         <button id="btn-settings" title="设置">⚙</button>
@@ -253,10 +262,10 @@ function workspaceShell() {
         </div>
         <div class="dash-section">
           <div class="dash-head">
-            <span class="dash-label">🕐 死亡时间窗 · 00:00 → 02:00</span>
-            <span class="dash-sub" id="dash-timeline-sub">运行查询，事件会自动落在这条时间线上</span>
+            <span class="dash-label">📓 案情进展</span>
+            <span class="dash-sub" id="dash-progress-sub">点击顶栏「📂 案件资料」查看完整回顾</span>
           </div>
-          <div class="tod-timeline" id="tod-timeline"></div>
+          <div class="case-progress" id="case-progress-glance"></div>
         </div>
       </div>
       <div class="task-card" id="task-card">
@@ -383,6 +392,7 @@ function brennanPhotoEl() {
 function bindTopbar() {
   document.getElementById("btn-settings").addEventListener("click", openSettings);
   document.getElementById("btn-help").addEventListener("click", openHelp);
+  document.getElementById("btn-casefile").addEventListener("click", () => openCaseFile("cast"));
   document.getElementById("btn-drawer").addEventListener("click", () => {
     document.getElementById("case-drawer").classList.toggle("open");
     refreshDrawer();
@@ -421,6 +431,287 @@ function refreshDrawer() {
       <div class="body"><b>${esc(t.title)}</b><br/>${esc(t.brennanOutro || "").split("\n")[0]}</div>
     </div>
   `).join("");
+}
+
+// ============================================================
+// 案件资料 (CASE FILE) — a tabbed reference panel: 人物 / 数据表 /
+// 庄园地图 / 案情进展. Built so Chinese-speaking players can keep
+// track of foreign names, know what tables/columns exist, see where
+// rooms are, and recap what has happened.
+// ============================================================
+const CASEFILE_CAST = {
+  victim: [
+    { pid: 1, en: "Elias Blackwood", zh: "伊莱亚斯·布莱克伍德", role: "死者 · 67 岁 · 三度获奖作家",
+      rel: "本案死者", hook: "周日清晨被秘书发现死在书房，钝器（青铜书挡）击打头部。" }
+  ],
+  suspects: [
+    { pid: 2, en: "Vivienne Ashford", zh: "薇薇安·阿什福德", role: "前妻 · 庄园主人",
+      rel: "前妻（2016 离婚）", hook: "离婚后仍住庄园，怕失去终身居住权。" },
+    { pid: 3, en: "Sophia Blackwood", zh: "索菲娅·布莱克伍德", role: "现任妻子 · 前编辑",
+      rel: "现任妻子（2020 结婚）", hook: "曾是 Elias 的编辑，婚前协议苛刻。" },
+    { pid: 4, en: "Marcus Thorne", zh: "马库斯·索恩", role: "文学经纪人（合作 22 年）",
+      rel: "经纪人", hook: "刚离婚、酗酒，怕被 Elias 解约而破产。" },
+    { pid: 5, en: "Iris Chen", zh: "艾莉丝·陈", role: "2023 年黑木奖得主 · 后辈作家",
+      rel: "门生", hook: "安静寡言，反复借阅 Elias 的成名作《沉默时刻》。" },
+    { pid: 6, en: "Julian Hartley", zh: "朱利安·哈特利", role: "同行 · 宿敌",
+      rel: "对手", hook: "连续三年屈居黑木奖亚军，妻子 2023 年去世。" },
+    { pid: 7, en: "Eleanor Wright", zh: "埃莉诺·赖特", role: "授权传记作者",
+      rel: "授权传记作者", hook: "为 Elias 写传记三年，剑桥三一学院出身。" },
+    { pid: 8, en: "Henrik Volkov", zh: "亨里克·沃尔科夫", role: "文学评论家",
+      rel: "评论家", hook: "俄裔，毒舌——骂过 Elias 最近四部小说。" }
+  ],
+  family: [
+    { pid: 14, en: "Margaret Blackwood", zh: "玛格丽特·布莱克伍德", role: "Elias 的妹妹（已故）",
+      rel: "妹妹", hook: "有抱负的作家，1986 年 22 岁自杀。" },
+    { pid: 15, en: "Charles Blackwood", zh: "查尔斯·布莱克伍德", role: "父亲（已故）",
+      rel: "父亲", hook: "Elias 与 Margaret 的父亲。" },
+    { pid: 16, en: "Henrietta Blackwood", zh: "亨丽埃塔·布莱克伍德", role: "母亲（已故）",
+      rel: "母亲", hook: "Elias 与 Margaret 的母亲。" },
+    { pid: 17, en: "Robert Wright", zh: "罗伯特·赖特", role: "Eleanor 的养父（已故）",
+      rel: "Eleanor 养父", hook: "Eleanor 的法定父亲。" },
+    { pid: 18, en: "Patricia Wright", zh: "帕特里夏·赖特", role: "Eleanor 的养母（已故）",
+      rel: "Eleanor 养母", hook: "Eleanor 的法定母亲。" }
+  ],
+  staff: [
+    { pid: 9, en: "Mrs Eileen Hodge", zh: "艾琳·霍奇太太", role: "管家",
+      rel: "庄园员工", hook: "随身带一本记录宾客言行的笔记本。" },
+    { pid: 10, en: "Mr Albert Pemberton", zh: "阿尔伯特·彭伯顿", role: "男管家",
+      rel: "庄园员工", hook: "CCTV 监控系统的管理员。" },
+    { pid: 11, en: "Anton Volkov", zh: "安东·沃尔科夫", role: "园丁",
+      rel: "庄园员工", hook: "评论家 Henrik 疏远的儿子。" },
+    { pid: 12, en: "Chef Pierre Dubois", zh: "皮埃尔·杜布瓦", role: "主厨",
+      rel: "庄园员工", hook: "承办了周六的颁奖晚宴。" },
+    { pid: 13, en: "Sarah Whitcombe", zh: "萨拉·惠特科姆", role: "秘书",
+      rel: "Elias 的助理", hook: "周日上午发现尸体的人。" }
+  ]
+};
+
+// table → {中文名, 用途}. Columns are read live via PRAGMA table_info.
+const CASEFILE_TABLES = [
+  ["Persons",            "人物档案",   "庄园里每个人的基本信息：姓名、年龄、身份、与死者的关系、所住房间。"],
+  ["Rooms",              "房间",       "庄园每个房间的名称、楼层、侧翼，以及是否装有监控。"],
+  ["KeycardAccess",      "门禁刷卡",   "每张门卡进出每个房间的时间与类型（进入 / 离开 / 被拒 / 越权）。"],
+  ["WiFiSessions",       "WiFi 会话",  "每个人的设备连接到哪个房间 AP 的起止时间——能反推人在哪。"],
+  ["PhoneRecords",       "通讯记录",   "当晚的短信与通话记录，含发送人、时间、内容。"],
+  ["WineCellarLog",      "酒窖取酒",   "谁、在什么时间、取走了哪一瓶酒。"],
+  ["WineBottles",        "藏酒",       "酒窖里每瓶酒的酒名、年份、货架位置。"],
+  ["Contracts",          "合同",       "庄园相关的法律合同，含状态（草稿 / 已签）与金额。"],
+  ["LibraryCheckouts",   "借阅记录",   "谁借了哪本书、借出与归还日期。"],
+  ["Books",              "藏书",       "图书馆书目：书名、作者、类型。"],
+  ["SeatingChart",       "晚宴座次",   "周六颁奖晚宴每个座位坐了谁。"],
+  ["Conversations",      "偷听对话",   "管家笔记本里记下的对话片段：说话人、听话人、地点、内容。"],
+  ["CCTVFiles",          "监控文件",   "各房间监控录像的状态，包含被删除的录像。"],
+  ["FamilyTree",         "家族关系",   "人物之间的亲属关系（部分领养记录被封存）。"],
+  ["WritingSoftwareLog", "写作日志",   "Elias 笔记本上 Scrivener 的自动保存与删除记录。"],
+  ["PhysicalEvidence",   "现场物证",   "鉴证科采集的现场物证与指纹 / 纤维比对结果。"],
+  ["PrizeHistory",       "获奖历史",   "黑木文学奖历年的得主与亚军。"]
+];
+
+function openCaseFile(tab) {
+  tab = tab || "cast";
+  const veil = document.getElementById("modal-veil");
+  const m = document.getElementById("modal-content");
+  if (!veil || !m) return;
+  m.className = "modal casefile-modal";
+  const tabs = [
+    ["cast",     "👥 人物"],
+    ["tables",   "🗃️ 数据表"],
+    ["map",      "🗺️ 庄园地图"],
+    ["progress", "📓 案情进展"]
+  ];
+  m.innerHTML = `
+    <header>
+      <h2 style="font-family:var(--font-serif); font-size:17px; letter-spacing:0.12em;">📂 案件资料</h2>
+      <span class="close">×</span>
+    </header>
+    <div class="casefile-tabs">
+      ${tabs.map(([k, label]) =>
+        `<button class="cf-tab ${k === tab ? "active" : ""}" data-tab="${k}">${label}</button>`
+      ).join("")}
+    </div>
+    <div class="casefile-body" id="casefile-body"></div>
+  `;
+  veil.classList.add("open");
+  m.querySelector(".close").addEventListener("click", closeModal);
+  veil.addEventListener("click", e => { if (e.target === veil) closeModal(); });
+  m.querySelectorAll(".cf-tab").forEach(b => {
+    b.addEventListener("click", () => {
+      m.querySelectorAll(".cf-tab").forEach(x => x.classList.remove("active"));
+      b.classList.add("active");
+      renderCaseFileTab(b.dataset.tab);
+    });
+  });
+  renderCaseFileTab(tab);
+}
+
+function renderCaseFileTab(tab) {
+  const body = document.getElementById("casefile-body");
+  if (!body) return;
+  if (tab === "cast")     body.innerHTML = caseFileCastHTML();
+  else if (tab === "tables")  { body.innerHTML = caseFileTablesHTML(); bindCaseFileTables(body); }
+  else if (tab === "map")     body.innerHTML = caseFileMapHTML();
+  else if (tab === "progress") body.innerHTML = caseFileProgressHTML();
+  body.scrollTop = 0;
+  // Person cards open the full dossier.
+  body.querySelectorAll("[data-person]").forEach(el => {
+    el.addEventListener("click", () => {
+      const pid = parseInt(el.dataset.person, 10);
+      if (pid) openSuspectModal(pid);
+    });
+  });
+}
+
+function castCardHTML(p, opts) {
+  opts = opts || {};
+  const photo = window.BMM_photoPath ? window.BMM_photoPath(p.pid) : null;
+  const marks = BMM2.state.marks || {};
+  const mark = marks["person_" + p.pid];
+  const markLabel = mark && mark !== "unknown" ? MARK_LABEL[mark] : "";
+  const photoEl = photo
+    ? `<img src="${photo}" alt="" loading="lazy" decoding="async"/>`
+    : `<div class="cc-ph">${esc(p.en.charAt(0))}</div>`;
+  return `
+    <div class="cast-card ${opts.suspect ? "is-suspect" : ""}" data-person="${p.pid}"
+         title="点击查看 ${esc(p.zh)} 的完整档案">
+      <div class="cc-photo">${photoEl}</div>
+      <div class="cc-body">
+        <div class="cc-names">
+          <span class="cc-zh">${esc(p.zh)}</span>
+          <span class="cc-en">${esc(p.en)}</span>
+          ${markLabel ? `<span class="cc-mark mark-${mark}">${markLabel}</span>` : ""}
+        </div>
+        <div class="cc-role">${esc(p.role)}</div>
+        <div class="cc-hook">${esc(p.hook)}</div>
+      </div>
+    </div>`;
+}
+
+function caseFileCastHTML() {
+  const C = CASEFILE_CAST;
+  return `
+    <p class="cf-intro">外国人名难记？这一页随时可查。<b>点任意一张卡片</b>可打开此人的完整档案（门禁、通话、对话、当前线索）。</p>
+    <div class="cf-group-title">☠ 死者</div>
+    <div class="cast-grid">${C.victim.map(p => castCardHTML(p)).join("")}</div>
+    <div class="cf-group-title">🎯 七名嫌疑人（昨晚住在庄园的 Guest）</div>
+    <div class="cast-grid">${C.suspects.map(p => castCardHTML(p, { suspect: true })).join("")}</div>
+    <div class="cf-group-title">🌳 布莱克伍德家族（已故 · 与动机相关）</div>
+    <div class="cast-grid">${C.family.map(p => castCardHTML(p)).join("")}</div>
+    <div class="cf-group-title">🛎 庄园员工</div>
+    <div class="cast-grid">${C.staff.map(p => castCardHTML(p)).join("")}</div>
+  `;
+}
+
+function caseFileTablesHTML() {
+  let html = `<p class="cf-intro">这是案件数据库里的全部数据表。写 SQL 前先在这里查清楚<b>表名和字段名</b>。点「▶ 看看内容」可预览前几行真实数据。</p>`;
+  for (const [name, zh, purpose] of CASEFILE_TABLES) {
+    let colsHtml = "";
+    try {
+      const info = BMM2.db.exec(`PRAGMA table_info('${name}')`);
+      const rows = (info[0] && info[0].values) ? info[0].values : [];
+      colsHtml = rows.map(r => {
+        const colName = r[1], colType = r[2], pk = r[5];
+        return `<span class="cf-col">${esc(colName)}<span class="cf-type">${esc(colType || "")}</span>${pk ? '<span class="cf-pk">PK</span>' : ""}</span>`;
+      }).join("");
+    } catch (e) {
+      colsHtml = `<span class="cf-col">（无法读取字段）</span>`;
+    }
+    html += `
+      <div class="cf-table" data-table="${esc(name)}">
+        <div class="cf-table-head">
+          <span class="cf-table-name">${esc(name)}</span>
+          <span class="cf-table-zh">${esc(zh)}</span>
+        </div>
+        <div class="cf-table-purpose">${esc(purpose)}</div>
+        <div class="cf-cols">${colsHtml}</div>
+        <button class="cf-peek" data-table="${esc(name)}">▶ 看看内容（前 5 行）</button>
+        <div class="cf-peek-result"></div>
+      </div>`;
+  }
+  return html;
+}
+
+function bindCaseFileTables(body) {
+  body.querySelectorAll(".cf-peek").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const name = btn.dataset.table;
+      const out = btn.nextElementSibling;
+      if (out.innerHTML) { out.innerHTML = ""; btn.textContent = "▶ 看看内容（前 5 行）"; return; }
+      let res;
+      try {
+        const safe = window.BMM2_filterQuery
+          ? window.BMM2_filterQuery(`SELECT * FROM ${name} LIMIT 5`, BMM2.state)
+          : `SELECT * FROM ${name} LIMIT 5`;
+        res = BMM2.db.exec(safe);
+      } catch (e) { out.innerHTML = `<div class="cf-peek-err">读取失败：${esc(e.message)}</div>`; return; }
+      const r = res[0];
+      if (!r || !r.values.length) { out.innerHTML = `<div class="cf-peek-err">（这张表暂时没有可见数据。）</div>`; btn.textContent = "▲ 收起"; return; }
+      let t = `<table class="cf-peek-table"><thead><tr>${r.columns.map(c => `<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>`;
+      for (const row of r.values) {
+        t += `<tr>${row.map(c => `<td>${c == null ? "<i>NULL</i>" : esc(String(c).slice(0, 60))}</td>`).join("")}</tr>`;
+      }
+      t += "</tbody></table>";
+      out.innerHTML = t;
+      btn.textContent = "▲ 收起";
+    });
+  });
+}
+
+function caseFileMapHTML() {
+  let rooms = [];
+  try {
+    const res = BMM2.db.exec("SELECT RoomID, Name, Wing, Floor, HasCCTV FROM Rooms ORDER BY Floor DESC, RoomID");
+    rooms = (res[0] && res[0].values) ? res[0].values : [];
+  } catch (e) { return `<p class="cf-intro">无法读取房间数据。</p>`; }
+  const floors = {};
+  for (const [rid, name, wing, floor, cctv] of rooms) {
+    (floors[floor] = floors[floor] || []).push({ rid, name, wing, cctv });
+  }
+  const floorName = f =>
+    f >= 3 ? "三楼 · 宾客客房" :
+    f === 2 ? "二楼 · 主人区 / 东翼 / 西翼" :
+    f === 1 ? "一楼 · 公共区域" : "地下 · 酒窖";
+  // crime-scene cluster: Study 103, Archive 405, connecting door 406
+  const crime = new Set([103, 405, 406]);
+  let html = `<p class="cf-intro">案发夜的舞台。<b style="color:var(--accent-blood-2)">红色房间</b>是案发核心：书房、档案室、以及连接两者、没有监控的那扇门。🎥 = 有监控，🚫 = 无监控盲区。</p>`;
+  for (const f of Object.keys(floors).sort((a, b) => b - a)) {
+    html += `<div class="cf-floor"><div class="cf-floor-name">${esc(floorName(parseInt(f, 10)))}</div><div class="cf-floor-rooms">`;
+    for (const room of floors[f]) {
+      const isCrime = crime.has(room.rid);
+      html += `
+        <div class="cf-room ${isCrime ? "is-crime" : ""}">
+          <div class="cf-room-id">#${room.rid}</div>
+          <div class="cf-room-name">${esc(room.name)}</div>
+          <div class="cf-room-meta">${esc(room.wing)} · ${room.cctv ? "🎥 有监控" : "🚫 监控盲区"}</div>
+        </div>`;
+    }
+    html += `</div></div>`;
+  }
+  return html;
+}
+
+function caseFileProgressHTML() {
+  let html = `<p class="cf-intro">每完成一章，这里就记下你<b>已经查实了什么</b>。读不下去时回这里回顾。</p>`;
+  let any = false;
+  for (let ch = 1; ch <= 11; ch++) {
+    if (chapterComplete(ch)) {
+      any = true;
+      html += `
+        <div class="cf-recap done">
+          <div class="cf-recap-ch">✓ 第 ${ch} 章</div>
+          <div class="cf-recap-text">${esc(CHAPTER_RECAP[ch] || "")}</div>
+        </div>`;
+    }
+  }
+  const cur = currentTask();
+  if (cur) {
+    html += `
+      <div class="cf-recap current">
+        <div class="cf-recap-ch">▸ 第 ${cur.chapter} 章 · 进行中</div>
+        <div class="cf-recap-text">当前任务：<b>${esc(cur.title)}</b><br/>${esc(cur.task || "")}</div>
+      </div>`;
+  }
+  if (!any && !cur) html += `<p class="cf-intro">调查尚未开始。</p>`;
+  return html;
 }
 
 // ============================================================
@@ -510,7 +801,65 @@ const MARK_LABEL = {
 
 function renderDashboard() {
   renderSuspectStrip();
-  renderTimeline();
+  renderProgressGlance();
+}
+
+// Chapter-by-chapter recap. Each line is "what the player has established"
+// after finishing that chapter — shown only for COMPLETED chapters so it
+// never spoils ahead. Used by the dashboard glance and the 案件资料 panel.
+const CHAPTER_RECAP = {
+  1:  "确认昨晚有 7 名 Guest 在庄园过夜——这就是嫌疑池。",
+  2:  "法医把死亡时间锁定在 00:30–01:30。这一小时里，只有 Eleanor Wright（埃莉诺·赖特）的门卡进出了书房。",
+  3:  "短信筛出三条动机：Marcus 怕破产、Vivienne 怕失去庄园、Eleanor 提到「日记本」「最后的篇章」。",
+  4:  "Vivienne 案发时段下酒窖取了一瓶 Pétrus——实为取回藏在酒窖的合同草稿。她有动机，但全程在酒窖与卧室，排除。",
+  5:  "借阅记录显示 Eleanor 借的全是 Margaret 的手稿、领养档案、抄袭法律书——这不是传记研究，是案件准备。",
+  6:  "Marcus 的 WiFi 整晚锁在自己房间，排除。Eleanor 的手机在 00:28–01:35 有 67 分钟空窗，整个死亡窗口不在任何 AP 上。",
+  7:  "管家偷听到：Eleanor 约 Elias「今夜，档案室」；Elias 当面对她说「名字刻在牌子上不等于家人」。",
+  8:  "书房、档案室、连接走廊都没有监控。死亡窗口的门禁显示只有 Eleanor 的卡碰过书房，其余六人都有不在场证明。",
+  9:  "封存的领养记录浮出：Eleanor 是 Margaret 的私生女，是 Elias 的外甥女——她当了三年他的传记作者。",
+  10: "写作日志暴露 Elias 两面：第七章写要认错，GalaSpeech 终稿却要当众反口。物证：书挡掌纹比中 Eleanor，死亡时间收窄到 00:50–01:05。",
+  11: "八列证据链完成——动机、机会、手段齐全。Eleanor Wright 被捕。"
+};
+
+// True only when EVERY task of a chapter is completed.
+function chapterComplete(ch) {
+  const tasks = window.BMM2_TASKS.filter(t => t.chapter === ch);
+  return tasks.length > 0 && tasks.every(t => taskDone(t.id));
+}
+
+// Dashboard glance — always-visible running recap. Shows a ✓ line for each
+// finished chapter and a ▸ line for the chapter in progress, so the player
+// can always see "what have I established / where am I".
+function renderProgressGlance() {
+  const host = document.getElementById("case-progress-glance");
+  if (!host) return;
+  const cur = currentTask();
+  const curCh = cur ? cur.chapter : 12;
+  let html = "";
+  for (let ch = 1; ch <= 11; ch++) {
+    if (chapterComplete(ch)) {
+      html += `<div class="cp-line done"><span class="cp-mark">✓</span>
+        <span class="cp-ch">第 ${ch} 章</span>
+        <span class="cp-text">${esc(CHAPTER_RECAP[ch] || "")}</span></div>`;
+    } else if (ch === curCh) {
+      html += `<div class="cp-line current"><span class="cp-mark">▸</span>
+        <span class="cp-ch">第 ${ch} 章</span>
+        <span class="cp-text">进行中：${esc(cur ? cur.title : "")}</span></div>`;
+    }
+  }
+  if (!html) {
+    html = `<div class="cp-line current"><span class="cp-mark">▸</span>
+      <span class="cp-text">调查刚刚开始。完成一关后，这里会记下你查到了什么。</span></div>`;
+  }
+  host.innerHTML = html;
+  // Newest (current) line scrolled into view.
+  const curLine = host.querySelector(".cp-line.current");
+  if (curLine) curLine.scrollIntoView({ block: "nearest" });
+  const sub = document.getElementById("dash-progress-sub");
+  if (sub) {
+    const done = [1,2,3,4,5,6,7,8,9,10,11].filter(chapterComplete).length;
+    sub.textContent = `已完成 ${done} / 11 章 · 顶栏「📂 案件资料」看完整回顾`;
+  }
 }
 
 function renderSuspectStrip() {
@@ -593,81 +942,6 @@ function renderSuspectStrip() {
   if (sub) sub.textContent = `已识别 ${found} / 7 名 · 点击查看完整档案`;
 }
 
-// Parse an event clue's time. Clues for events have title === time string
-// (e.g., "2024-10-20 00:48"). Returns minutes past midnight, or null.
-function clueMinutes(c) {
-  const s = String(c.title || "");
-  const m = s.match(/(\d{2}):(\d{2})/);
-  if (!m) return null;
-  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
-}
-
-function renderTimeline() {
-  const tl = document.getElementById("tod-timeline");
-  if (!tl) return;
-  const all = Object.values(BMM2.clueIndex)
-    .filter(c => c.type === "event" || c.type === "comm")
-    .map(c => ({ c, mins: clueMinutes(c) }))
-    .filter(x => x.mins != null && x.mins >= 0 && x.mins <= 120);
-
-  // Window: 0:00 to 02:00 (120 min). ToD band: 00:30 to 01:30 (30-90).
-  const total = 120;
-  let html = `
-    <div class="tl-scale">
-      <span style="left:0%">00:00</span>
-      <span style="left:25%">00:30</span>
-      <span style="left:50%">01:00</span>
-      <span style="left:75%">01:30</span>
-      <span style="left:100%">02:00</span>
-    </div>
-    <div class="tl-track">
-      <div class="tl-tod-band" title="法医估算死亡时间 00:30 – 01:30"></div>
-  `;
-  // Sort dots by time and assign a vertical row so same-minute events don't overlap
-  all.sort((a, b) => a.mins - b.mins);
-  let lastMins = -10, row = 0;
-  for (const { c, mins } of all) {
-    const pct = (mins / total) * 100;
-    const text = (c.sub || "") + " " + (c.title || "");
-    // Pull the FIRST person id from any of the known column forms
-    let pid = null;
-    const m1 = text.match(/P#(\d+)/);
-    if (m1) pid = parseInt(m1[1], 10);
-    if (!pid) {
-      const m2 = text.match(/(?:Person|From|To|Speaker|TakenBy)?(?:PersonID|ID|By):\s*(\d+)/i);
-      if (m2) pid = parseInt(m2[1], 10);
-    }
-    const photo = pid && window.BMM_photoPath ? window.BMM_photoPath(pid) : null;
-    const colorClass = pid === 7 ? "is-eleanor" :
-                       pid === 4 ? "is-marcus" :
-                       pid === 2 ? "is-vivienne" : "";
-    // Vertical stagger: if dots are within 2 minutes of each other, alternate rows
-    if (mins - lastMins < 3) row = (row + 1) % 2;
-    else row = 0;
-    lastMins = mins;
-    const topPx = 14 + row * 4;
-    const titleAttr = esc((c.title || "") + (c.sub ? " · " + c.sub : ""));
-    html += `<div class="tl-dot ${colorClass}" style="left:${pct.toFixed(2)}%; top:${topPx}px" title="${titleAttr}" data-key="${cssAttr(c.key)}">${photo ? `<img src="${photo}" alt=""/>` : ""}</div>`;
-  }
-  html += "</div>";
-  tl.innerHTML = html;
-
-  // Click → re-open result for that clue (use openClueDetail for events too)
-  tl.querySelectorAll(".tl-dot").forEach(dot => {
-    dot.addEventListener("click", () => {
-      const key = dot.dataset.key;
-      if (key) openClueDetail(key);
-    });
-  });
-
-  // Sub-line
-  const sub = document.getElementById("dash-timeline-sub");
-  if (sub) {
-    sub.textContent = all.length === 0
-      ? "运行查询，事件会自动落在这条时间线上"
-      : `${all.length} 个事件已落入 0:00–2:00 时间窗`;
-  }
-}
 function cssAttr(s) { return String(s).replace(/"/g, '\\"'); }
 
 function restoreClues() {
@@ -1119,6 +1393,7 @@ async function completeCurrentTask(t, sql) {
 
   // Advance to next task. No setTimeout — the 继续调查 gate above already
   // gave the player a deliberate pause; chain straight into the next beat.
+  renderDashboard();   // refresh the 案情进展 glance now this chapter may be done
   if (isComplete()) {
     refreshTopbar();
   } else {
