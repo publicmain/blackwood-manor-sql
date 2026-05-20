@@ -1174,8 +1174,14 @@ function starterFor(task) {
   if (diff === "easy") {
     const ans = window.BMM2_ANSWERS && window.BMM2_ANSWERS[task.id];
     if (ans) {
-      return `-- 简单模式 · 完整 SQL 已写好。读懂它，然后点 ▶ Run。\n`
-           + `-- 想挑战的话，也可以自己改写。\n\n${ans};`;
+      // Plain-Chinese explanation of what the preloaded query does, so an
+      // Easy-mode player isn't just clicking Run on a black box.
+      const brief = window.BMM2_BRIEF && window.BMM2_BRIEF[task.id];
+      const goalLine = brief && brief.goal
+        ? `-- 这条 SQL 在做的事：${brief.goal}\n` : "";
+      return `-- 简单模式 · 完整 SQL 已为你写好。\n`
+           + goalLine
+           + `-- 读一遍，然后点 ▶ Run。想挑战可自己改写。\n\n${ans};`;
     }
     return task.starter || "";
   }
@@ -1598,23 +1604,30 @@ async function completeCurrentTask(t, sql, opts) {
 // ============================================================
 function waitForContinue(label) {
   return new Promise(resolve => {
-    const host = document.querySelector(".brennan-actions");
-    if (!host) { resolve(); return; }
-    host.querySelectorAll(".continue-gate").forEach(el => el.remove());
+    // A FIXED-position bar — never buried in the scrollable right rail.
+    // (Playtest: a weak player got soft-locked when the gate button was
+    // clipped out of view AND the skip button was disabled by the gate.)
+    document.querySelectorAll(".continue-gate-bar").forEach(el => el.remove());
 
     const runBtn = document.getElementById("btn-run");
+    const skipBtn = document.getElementById("task-skip-story");
     if (runBtn) runBtn.disabled = true;
+    if (skipBtn) skipBtn.disabled = true;   // a gate is up — skip is moot
     BMM2.awaitingContinue = true;
 
+    const bar = document.createElement("div");
+    bar.className = "continue-gate-bar";
     const btn = document.createElement("button");
     btn.className = "continue-gate";
     btn.textContent = label || "继续调查 →";
+    bar.appendChild(btn);
 
     function finish() {
       window.removeEventListener("keydown", onKey);
       BMM2.awaitingContinue = false;
       if (runBtn) runBtn.disabled = false;
-      btn.remove();
+      if (skipBtn) skipBtn.disabled = false;
+      bar.remove();
       resolve();
     }
     function onKey(e) {
@@ -1628,8 +1641,7 @@ function waitForContinue(label) {
     }
     btn.addEventListener("click", finish, { once: true });
     window.addEventListener("keydown", onKey);
-    host.prepend(btn);
-    btn.scrollIntoView({ block: "nearest" });
+    document.body.appendChild(bar);
   });
 }
 
