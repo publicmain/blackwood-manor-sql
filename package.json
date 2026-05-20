@@ -1,0 +1,12 @@
+{
+  "name": "blackwood-manor-sql-detective",
+  "version": "1.0.0",
+  "private": true,
+  "description": "黑木庄园谋杀案 — an interactive SQL detective game",
+  "scripts": {
+    "start": "serve . -l tcp://0.0.0.0:${PORT:-3000} --no-clipboard"
+  },
+  "dependencies": {
+    "serve": "14.2.4"
+  }
+}

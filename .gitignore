@@ -1,0 +1,7 @@
+node_modules/
+*.bak
+screenshots/
+uploads/
+_check_*.png
+01-_*.png
+02-_*.png

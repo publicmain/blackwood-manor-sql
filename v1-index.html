@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>黑木庄园谋杀案 · 调查辅助页</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+</head>
+<body>
+
+<div id="loading" style="position:fixed; inset:0; background:var(--bg-0); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:1000; color:var(--paper); font-family:var(--font-display); letter-spacing:0.16em;">
+  <div style="font-size:22px; margin-bottom:14px;">BMM-2024-1019</div>
+  <div class="msg" style="font-family:var(--font-mono); color:var(--paper-mute); font-size:12px;">正在初始化数据库...</div>
+</div>
+
+<header class="topbar">
+  <div class="case-id">
+    BMM-2024-1019 · Gloucestershire CID · DI Brennan
+    <span class="closed-tag hidden">[CLOSED]</span>
+    <span class="epigraph">"我宁愿把案子托给一队会写 GROUP BY 的高中生。"</span>
+  </div>
+  <h1>黑木庄园谋杀案</h1>
+  <div class="ctrls">
+    <span id="progress-summary-top" style="font-family:var(--font-mono); font-size:12px; color:var(--paper-mute);"></span>
+    <button id="btn-reset" title="清空所有进度">↺ Reset 进度</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <h2>章节进度</h2>
+    <ul id="ch-list" class="ch-list"></ul>
+    <div id="progress-summary" class="progress-summary"></div>
+    <div style="margin-top:18px; font-family:var(--font-mono); font-size:10px; color:var(--paper-mute); line-height:1.5;">
+      跑通每章的 SQL 查询<br />
+      → 解锁对应区域的证据<br />
+      → 自行 Mark 嫌疑人
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- Section A · Case header -->
+    <section class="section" id="section-A">
+      <h2 class="s-title"><span class="s-id">A</span> 案件档案头 <span class="s-en">Case Brief</span></h2>
+
+      <!-- Manor establishing photo -->
+      <div class="manor-band">
+        <img src="portraits/Manor.png" alt="Blackwood Manor" />
+        <div class="manor-band-text">
+          <div class="manor-band-eyebrow">BLACKWOOD MANOR · Gloucestershire · 19 — 20 Oct 2024</div>
+          <div class="manor-band-title">黑木庄园</div>
+          <div class="manor-band-sub">维多利亚哥特式乡村庄园 · 三层 + 酒窖 · 现持有人 Vivienne Ashford</div>
+        </div>
+      </div>
+
+      <div class="case-header">
+        <div class="case-header-victim">
+          <img src="portraits/Elias.png" class="victim-portrait" alt="Elias Blackwood" />
+          <div class="victim-tag">受害人 · VICTIM</div>
+        </div>
+        <div class="brief">
+          <h3>Elias Blackwood, 67</h3>
+          <div class="meta">作家 · 三届 Blackwood Prize 创办人 · 1957 — 2024</div>
+          <p>2024 年 10 月 20 日（周日）上午 08:30，秘书 <b>Sarah Whitcombe</b> 抵达黑木庄园，发现 <b>Elias Blackwood</b> 死于东翼 <b>书房 (Room 103)</b>。</p>
+          <p>初步勘查：钝器伤，凶器为书桌上一枚 <b>青铜书挡</b>。无强行入侵痕迹。前晚 19:00 起，七名宾客与五名常驻员工在场参加 <b>Blackwood 文学奖年度晚宴</b>。</p>
+          <p>所有人此夜均在庄园范围之内。读卡器、Wi-Fi、CCTV 系统记录均封存。</p>
+        </div>
+        <div class="case-facts">
+          <dl>
+            <dt>发现时间</dt>
+            <dd>周日 08:30</dd>
+            <dt>法医死亡时间窗 (ToD)</dt>
+            <dd class="tod">00:30 – 01:30</dd>
+            <dt>凶器</dt>
+            <dd>青铜书挡（桌面）</dd>
+            <dt>现场</dt>
+            <dd>东翼 · Room 103 书房</dd>
+            <dt>负责警官</dt>
+            <dd>DI James Brennan</dd>
+          </dl>
+        </div>
+      </div>
+
+      <!-- Evidence strip: study + bookend -->
+      <div class="evidence-strip">
+        <figure class="evidence-photo">
+          <img src="portraits/Study.png" alt="Room 103 Study crime scene" />
+          <figcaption>
+            <span class="ev-label">SCENE</span>
+            <span class="ev-title">Room 103 · 东翼书房</span>
+            <span class="ev-meta">案发现场 · 桌上凶器已就位</span>
+          </figcaption>
+        </figure>
+        <figure class="evidence-photo">
+          <img src="portraits/Bookend.png" alt="Bronze bookend murder weapon" />
+          <figcaption>
+            <span class="ev-label">WEAPON</span>
+            <span class="ev-title">青铜书挡 · 案桌右侧</span>
+            <span class="ev-meta">钝器伤致命 · 物证 EVIDENCE 01</span>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- Investigation Whiteboard -->
+    <section class="section" id="section-whiteboard">
+      <h2 class="s-title"><span class="s-id">●</span> 调查白板 <span class="s-en">Findings</span></h2>
+      <p class="s-desc">每跑通一章查询，新发现自动登上白板。最新一条在最上。</p>
+      <div class="whiteboard">
+        <div class="wb-head">
+          <h3>● 调查发现</h3>
+          <span id="wb-progress" class="wb-progress">进度 [ 0 / 11 章 ]</span>
+        </div>
+        <div id="wb-body" class="wb-body"></div>
+      </div>
+    </section>
+
+    <!-- Section E · SQL Sandbox -->
+    <section class="section" id="section-sql">
+      <h2 class="s-title"><span class="s-id">E</span> SQL 沙盘 <span class="s-en">Query Console</span></h2>
+      <p class="s-desc">编辑器是真沙盘——可以跑任何合法 SQLite。命中预期结果会解锁对应章节。</p>
+      <div id="sandbox"></div>
+    </section>
+
+    <!-- Section B · Suspects -->
+    <section class="section" id="section-suspects">
+      <h2 class="s-title"><span class="s-id">B</span> 嫌疑人名册 <span class="s-en">Persons of Interest</span></h2>
+      <p class="s-desc">7 名宾客 · 每张卡片记录该人物已可见的证据。证据条目随章节解锁。</p>
+      <div id="suspect-grid"></div>
+    </section>
+
+    <!-- Section D · Timeline -->
+    <section class="section" id="section-timeline">
+      <h2 class="s-title"><span class="s-id">D</span> 时间线 <span class="s-en">Timeline</span></h2>
+      <p class="s-desc">周六 18:00 → 周日 03:00。每条轨道一个人物。拖动顶部金色游标聚焦 ±15 分钟。</p>
+      <div id="timeline"></div>
+    </section>
+
+    <!-- Section C · Floorplan -->
+    <section class="section" id="section-floorplan">
+      <h2 class="s-title"><span class="s-id">C</span> 庄园平面图 <span class="s-en">Manor Floor Plan</span></h2>
+      <p class="s-desc">悬停房间查看 CCTV/读卡器/当晚活动。书房 103 为案发现场。</p>
+      <div id="floorplan"></div>
+    </section>
+
+    <!-- Section F · Family tree -->
+    <section class="section" id="section-family">
+      <h2 class="s-title"><span class="s-id">F</span> 家族树 <span class="s-en">Family Tree</span></h2>
+      <p class="s-desc">默认仅显示公开记录。Sealed 关系在解锁前不可见。</p>
+      <div id="familytree"></div>
+    </section>
+
+    <!-- Section G · Evidence cabinet -->
+    <section class="section" id="section-evidence">
+      <h2 class="s-title"><span class="s-id">G</span> 物证柜 <span class="s-en">Evidence Cabinet</span></h2>
+      <p class="s-desc">原始物证表 · 通讯 / 借阅 / 酒窖 / 文档操作日志。tab 随章节渐次开启。</p>
+      <div id="evidence-cab"></div>
+    </section>
+
+    <!-- Section I · Conversations -->
+    <section class="section" id="section-convos">
+      <h2 class="s-title"><span class="s-id">I</span> 偷听对话记录 <span class="s-en">Overheard</span></h2>
+      <p class="s-desc">员工 Mrs Hodge / Pemberton / Chef Dubois 记录的当晚对话。时间顺序，无重点标记。</p>
+      <div id="convos"></div>
+    </section>
+
+    <!-- Section H · CCTV matrix -->
+    <section class="section" id="section-cctv">
+      <h2 class="s-title"><span class="s-id">H</span> 监控状态矩阵 <span class="s-en">CCTV Matrix</span></h2>
+      <p class="s-desc">每个房间的 CCTV 覆盖、片段状态、删除信息。</p>
+      <div id="cctv-matrix"></div>
+    </section>
+
+    <!-- Section J · Case closed -->
+    <section class="section" id="section-case-closed">
+      <h2 class="s-title"><span class="s-id">J</span> 案件结案页 <span class="s-en">Case Closed</span></h2>
+      <p class="s-desc">第 11 章解锁后启用。七列证据由你自己跑出，不预先填好。</p>
+      <div id="case-closed"></div>
+    </section>
+
+    <footer style="margin-top:40px; padding-top:18px; border-top:1px solid var(--border); font-family:var(--font-mono); font-size:10px; color:var(--paper-mute); letter-spacing:0.08em; text-align:center;">
+      Investigation Tool · Gloucestershire CID · For training purposes · 数据库内置 16 张表 · sql.js in-browser
+    </footer>
+
+  </main>
+</div>
+
+<!-- Notebook FAB -->
+<button id="notebook-fab" class="notebook-fab" title="侦探笔记">✎</button>
+<div id="notebook-panel" class="notebook-panel">
+  <header>
+    <span>侦探笔记 · DI Brennan</span>
+    <button id="notebook-close" title="关闭">×</button>
+  </header>
+  <textarea id="notebook-text" placeholder="把推理写在这儿。每三秒钟自动保存到 localStorage。"></textarea>
+</div>
+
+<script src="schema.js"></script>
+<script src="meta.js"></script>
+<script src="avatars.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>

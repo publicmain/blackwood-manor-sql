@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>黑木庄园谋杀案 · 侦探调查台</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles-v2.css?v=11" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+</head>
+<body>
+
+<!-- ========== OPENING SEQUENCE ========== -->
+<div id="opening" class="opening">
+
+  <!-- Stage 1: police identifier -->
+  <div id="op-id" class="stage active">
+    <div class="id-lines">
+      <div class="grand">Gloucestershire CID</div>
+      Criminal Investigation Department
+      <br/>─────────────────────────────────<br/>
+      INTERNAL CASE FILE · BMM-2024-1019
+      <br/>
+      <div class="lock">AUTHORIZED PERSONNEL ONLY</div>
+    </div>
+  </div>
+
+  <!-- Stage 2: manor establishing shot -->
+  <div id="op-manor" class="stage bg-manor">
+    <div class="estab">Ashford Manor · Cotswolds, England<br/>Sunday, 20 October 2024 · 08:47</div>
+  </div>
+
+  <!-- Stage 3: title -->
+  <div id="op-title" class="stage title-stage bg-manor">
+    <h1>黑 木 庄 园 谋 杀 案<span class="en">BLACKWOOD MANOR</span></h1>
+    <div class="subtitle">A SQL-Driven Investigation</div>
+  </div>
+
+  <!-- Stage 4: Brennan monologue -->
+  <div id="op-mono" class="stage monologue-stage">
+    <div class="brennan-card">
+      <div class="brennan-photo svg-portrait">
+        <svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg" aria-label="DI James Brennan">
+          <defs>
+            <linearGradient id="bg-grad-op" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#1A2230"/>
+              <stop offset="100%" stop-color="#0A0E14"/>
+            </linearGradient>
+          </defs>
+          <rect width="100" height="120" fill="url(#bg-grad-op)"/>
+          <path d="M 8 120 Q 8 85 32 78 L 68 78 Q 92 85 92 120 Z" fill="#2A3344" stroke="#3D4A60" stroke-width="0.8"/>
+          <path d="M 38 78 L 50 92 L 62 78" stroke="#A0392E" stroke-width="1.5" fill="none" opacity="0.6"/>
+          <ellipse cx="50" cy="48" rx="22" ry="28" fill="#1A2230" stroke="#3D4A60" stroke-width="0.8"/>
+          <path d="M 30 36 Q 50 22 70 36" stroke="#3D4A60" stroke-width="1" fill="none" opacity="0.7"/>
+          <text x="50" y="105" text-anchor="middle" font-family="Georgia,serif" font-size="6" fill="#B89968" letter-spacing="0.2em">DI JB</text>
+        </svg>
+      </div>
+      <div>
+        <div class="speech"></div>
+        <div class="name">DI JAMES BRENNAN · GLOUCESTERSHIRE CID</div>
+      </div>
+    </div>
+    <div class="actions">
+      <button id="btn-enter">进入案卷 · ENTER CASE FILE</button>
+      <button id="btn-skip" class="ghost">跳过开场</button>
+    </div>
+  </div>
+
+  <div class="opening-loading">正在初始化案件数据库...</div>
+</div>
+
+<!-- ========== WORKSPACE (mounted after opening) ========== -->
+<div id="workspace" class="workspace" style="display:none;"></div>
+
+<!-- ========== Scripts ========== -->
+<script src="schema.js?v=11"></script>
+<script src="avatars.js?v=11"></script>
+<script src="meta-v2.js?v=11"></script>
+<script src="story.js?v=11"></script>
+<script src="brennan.js?v=11"></script>
+<script src="cards.js?v=11"></script>
+<script src="chapters.js?v=11"></script>
+<script src="workspace.js?v=11"></script>
+
+</body>
+</html>
