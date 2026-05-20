@@ -137,23 +137,21 @@ ORDER BY k.AccessTime;
 
 **6.2 Marcus 的 Wi-Fi 时间线**
 ```sql
-SELECT w.StartTime, w.EndTime, r.Name AS AP, w.DataMB, 'Marcus' AS Who
+SELECT w.StartTime, w.EndTime, r.Name AS AP, w.DataMB
 FROM WiFiSessions w
 JOIN Rooms r ON r.RoomID = w.APRoomID
 WHERE w.PersonID = 4
 ORDER BY w.StartTime;
 ```
-> 注：评分要求结果含 `Marcus` 与 `00:18`，starter 的列里无人名，故加常量列 `'Marcus' AS Who`。
 
 **6.3 Eleanor 的 Wi-Fi 时间线**
 ```sql
-SELECT w.StartTime, w.EndTime, r.Name AS AP, w.DataMB, 'Eleanor' AS Who
+SELECT w.StartTime, w.EndTime, r.Name AS AP, w.DataMB
 FROM WiFiSessions w
 JOIN Rooms r ON r.RoomID = w.APRoomID
 WHERE w.PersonID = 7
 ORDER BY w.StartTime;
 ```
-> 同理加常量列 `'Eleanor' AS Who`，满足 `Eleanor` + `00:28` 校验。
 
 ## 第 7 章 · 餐桌上的密语
 

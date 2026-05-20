@@ -799,6 +799,8 @@ Margaret Blackwood。一九六四到一九八六。二十二岁自杀。
 // ============================================================
 window.BMM2_grade = function (task, result, rawQuery) {
   const g = task.grade || {};
+
+  // Ch0 tutorial — any successful query passes.
   if (g.anyQuery) {
     return result && result.values && result.values.length >= 0
       ? { pass: true, why: "查询执行成功" }
@@ -810,26 +812,70 @@ window.BMM2_grade = function (task, result, rawQuery) {
   const rows = result.values;
   const cols = result.columns;
 
+  // Required column NAMES (Ch11 八列证据) — checked regardless of answer-key.
+  if (g.requiredColumns) {
+    for (const need of g.requiredColumns) {
+      if (!cols.includes(need)) {
+        return { pass: false, why: `缺列：${need}（八列证据缺一不可）` };
+      }
+    }
+  }
+
+  // ============================================================
+  // STRICT answer-key comparison — the real anti-cheese gate.
+  // Run the canonical SQL through the SAME anti-spoiler filter the
+  // player's query went through, then compare:
+  //   (1) exact row count, and
+  //   (2) every value in the canonical result must appear in the
+  //       player's result.
+  // This rejects `SELECT *` (wrong row count) and wrong-row queries
+  // (missing canonical values), while still allowing the player to
+  // SELECT extra columns or use a different ORDER BY.
+  // ============================================================
+  const answer = window.BMM2_ANSWERS && window.BMM2_ANSWERS[task.id];
+  if (answer && window.BMM2 && window.BMM2.db) {
+    let canonRows = null;
+    try {
+      const state = window.BMM2.state || {};
+      const filtered = window.BMM2_filterQuery
+        ? window.BMM2_filterQuery(answer, state) : answer;
+      const c = window.BMM2.db.exec(filtered);
+      canonRows = (c[0] && c[0].values) ? c[0].values : [];
+    } catch (e) {
+      canonRows = null;   // canonical failed — fall back to heuristics below
+    }
+    if (canonRows) {
+      if (rows.length !== canonRows.length) {
+        return {
+          pass: false,
+          why: `结果应为 ${canonRows.length} 行，你的查询返回了 ${rows.length} 行` +
+               `——再检查 WHERE / JOIN 条件，别用 SELECT * 一次拉全表`
+        };
+      }
+      // Build the multiset of every value the player's result contains.
+      const playerVals = new Set();
+      for (const r of rows) for (const c of r) playerVals.add(String(c));
+      for (const r of canonRows) {
+        for (const c of r) {
+          if (!playerVals.has(String(c))) {
+            return {
+              pass: false,
+              why: "行数对了，但结果里缺少关键数据——" +
+                   "检查你查的是不是正确的行、SELECT 的列是否齐全"
+            };
+          }
+        }
+      }
+      return { pass: true, why: "查询命中——结果与标准答案一致" };
+    }
+  }
+
+  // ---- Fallback heuristics (only if no answer-key is registered) ----
   if (g.rows !== undefined && rows.length !== g.rows) {
     return { pass: false, why: `期望 ${g.rows} 行，实际 ${rows.length} 行` };
   }
   if (g.minRows !== undefined && rows.length < g.minRows) {
     return { pass: false, why: `至少需要 ${g.minRows} 行，实际 ${rows.length} 行` };
-  }
-  if (g.cols) {
-    for (const need of g.cols) {
-      if (!cols.includes(need)) {
-        return { pass: false, why: `缺列：${need}` };
-      }
-    }
-  }
-  // requiredColumns — same as cols, alias for readability
-  if (g.requiredColumns) {
-    for (const need of g.requiredColumns) {
-      if (!cols.includes(need)) {
-        return { pass: false, why: `缺列：${need}（七列证据缺一不可）` };
-      }
-    }
   }
   if (g.firstColEquals !== undefined) {
     const v = rows[0] && rows[0][0];
@@ -854,6 +900,43 @@ window.BMM2_grade = function (task, result, rawQuery) {
     if (!hit) return { pass: false, why: `结果中应有包含 "${g.anyContainsCI}" 的单元` };
   }
   return { pass: true, why: "查询命中" };
+};
+
+// ============================================================
+// Answer key — canonical SQL per task. The grader runs these and
+// compares row count + value set against the player's result.
+// ============================================================
+window.BMM2_ANSWERS = {
+  "1.1": "SELECT FullName, Age, Occupation FROM Persons WHERE PersonType = 'Guest'",
+  "2.1": "SELECT PersonID, AccessTime, AccessType FROM KeycardAccess WHERE RoomID = 103 AND AccessTime BETWEEN '2024-10-20 00:30' AND '2024-10-20 01:30' ORDER BY AccessTime",
+  "3.1": "SELECT FromPersonID, Content FROM PhoneRecords WHERE Content LIKE '%ruin%' OR Content LIKE '%lose%'",
+  "3.2": "SELECT FromPersonID, StartTime, Content FROM PhoneRecords WHERE Content LIKE '%tonight%'",
+  "3.3": "SELECT StartTime, Content FROM PhoneRecords WHERE FromPersonID = 7",
+  "4.1": "SELECT COUNT(*) FROM WineCellarLog",
+  "4.2": "SELECT p.FullName, COUNT(*) AS Trips FROM WineCellarLog w JOIN Persons p ON p.PersonID = w.TakenByPersonID GROUP BY w.TakenByPersonID ORDER BY Trips DESC",
+  "4.3": "SELECT b.Label, b.Vintage, b.ShelfLocation, w.AccessTime FROM WineCellarLog w JOIN WineBottles b ON b.BottleID = w.BottleID WHERE w.TakenByPersonID = 2",
+  "4.4": "SELECT StartTime, ToName, Content FROM PhoneRecords WHERE FromPersonID = 2 ORDER BY StartTime",
+  "4.5": "SELECT Title, Counterparty, Amount, Notes FROM Contracts WHERE Status = 'Draft'",
+  "5.1": "SELECT p.FullName, COUNT(*) AS Borrowings FROM LibraryCheckouts lc JOIN Persons p ON p.PersonID = lc.PersonID GROUP BY lc.PersonID ORDER BY Borrowings DESC",
+  "5.2": "SELECT b.Title, b.Author, lc.CheckoutDate, lc.ReturnDate FROM LibraryCheckouts lc JOIN Books b ON b.BookID = lc.BookID WHERE lc.PersonID = 7",
+  "5.3": "SELECT b.Title, lc.CheckoutDate FROM LibraryCheckouts lc JOIN Books b ON b.BookID = lc.BookID WHERE lc.PersonID = 5",
+  "6.1": "SELECT p.FullName, k.AccessTime, r.Name, k.Notes FROM KeycardAccess k JOIN Persons p ON p.PersonID = k.PersonID JOIN Rooms r ON r.RoomID = k.RoomID WHERE p.FullName = 'Marcus Thorne' ORDER BY k.AccessTime",
+  "6.2": "SELECT w.StartTime, w.EndTime, r.Name AS AP, w.DataMB FROM WiFiSessions w JOIN Rooms r ON r.RoomID = w.APRoomID WHERE w.PersonID = 4 ORDER BY w.StartTime",
+  "6.3": "SELECT w.StartTime, w.EndTime, r.Name AS AP, w.DataMB FROM WiFiSessions w JOIN Rooms r ON r.RoomID = w.APRoomID WHERE w.PersonID = 7 ORDER BY w.StartTime",
+  "7.1": "SELECT s.SeatNo, p.FullName FROM SeatingChart s JOIN Persons p ON p.PersonID = s.PersonID ORDER BY s.SeatNo",
+  "7.2": "SELECT c.SpokenTime, sp.FullName AS Speaker, ls.FullName AS Listener, r.Name AS Room, c.Snippet FROM Conversations c JOIN Persons sp ON sp.PersonID = c.SpeakerID LEFT JOIN Persons ls ON ls.PersonID = c.ListenerID JOIN Rooms r ON r.RoomID = c.RoomID ORDER BY c.SpokenTime",
+  "7.3": "SELECT c.SpokenTime, ls.FullName AS ToWhom, r.Name AS Room, c.Snippet FROM Conversations c LEFT JOIN Persons ls ON ls.PersonID = c.ListenerID JOIN Rooms r ON r.RoomID = c.RoomID WHERE c.SpeakerID = 1 ORDER BY c.SpokenTime",
+  "8.1": "SELECT RoomID, Name, Wing, Floor FROM Rooms WHERE HasCCTV = 0",
+  "8.2": "SELECT c.FileID, r.Name AS Room, c.RecordedStart, c.DeletedTime, p.FullName AS DeletedBy FROM CCTVFiles c JOIN Rooms r ON r.RoomID = c.RoomID LEFT JOIN Persons p ON p.PersonID = c.DeletedByID WHERE c.FileStatus = 'Deleted'",
+  "8.3": "SELECT p.FullName FROM Persons p LEFT JOIN WiFiSessions w ON w.PersonID = p.PersonID AND w.StartTime < '2024-10-20 01:30' AND (w.EndTime > '2024-10-20 00:30' OR w.EndTime IS NULL) WHERE p.PersonType = 'Guest' AND w.SessionID IS NULL",
+  "8.4": "SELECT p.FullName, r.Name AS Room, k.AccessTime, k.AccessType FROM KeycardAccess k JOIN Persons p ON p.PersonID = k.PersonID JOIN Rooms r ON r.RoomID = k.RoomID WHERE k.AccessTime BETWEEN '2024-10-20 00:30' AND '2024-10-20 01:30' ORDER BY k.AccessTime",
+  "9.1": "SELECT p.FullName, ft.RelationType, ft.EffectiveYear FROM FamilyTree ft JOIN Persons p ON p.PersonID = ft.RelatedPersonID WHERE ft.PersonID = 1",
+  "9.2": "SELECT p1.FullName AS Child, p2.FullName AS Parent, ft.RecordStatus, ft.EffectiveYear FROM FamilyTree ft JOIN Persons p1 ON p1.PersonID = ft.PersonID JOIN Persons p2 ON p2.PersonID = ft.RelatedPersonID WHERE ft.RelationType = 'Parent' AND ft.RecordStatus IN ('Public', 'Sealed_Adoption')",
+  "9.3": "SELECT p.FullName FROM FamilyTree ft JOIN Persons p ON p.PersonID = ft.PersonID WHERE ft.RelatedPersonID = 14 AND ft.RelationType = 'Parent' AND ft.RecordStatus = 'Sealed_Adoption'",
+  "10.1": "SELECT EventTime, Action, FileName, PreviewText FROM WritingSoftwareLog ORDER BY EventTime",
+  "10.2": "SELECT DISTINCT d.FileName FROM WritingSoftwareLog d WHERE d.Action = 'Delete' AND EXISTS (SELECT 1 FROM WritingSoftwareLog s WHERE s.FileName = d.FileName AND s.Action = 'Save' AND (julianday(d.EventTime) - julianday(s.EventTime)) * 24 * 60 <= 15 AND s.EventTime < d.EventTime)",
+  "10.3": "SELECT e.ItemName, e.Analysis, p.FullName AS MatchedTo FROM PhysicalEvidence e LEFT JOIN Persons p ON p.PersonID = e.MatchedPersonID",
+  "11.1": "SELECT p.FullName AS Suspect, p.RelationToElias AS PublicRelation, (SELECT 'Niece (Sealed: daughter of ' || sm.FullName || ')' FROM FamilyTree ft JOIN Persons sm ON ft.RelatedPersonID = sm.PersonID WHERE ft.PersonID = p.PersonID AND ft.RecordStatus = 'Sealed_Adoption' LIMIT 1) AS BloodRelation, (SELECT k.AccessTime FROM KeycardAccess k WHERE k.PersonID = p.PersonID AND k.RoomID = 103 AND k.AccessTime BETWEEN '2024-10-20 00:30' AND '2024-10-20 01:30' ORDER BY k.AccessTime LIMIT 1) AS StudyEntry, (SELECT MIN(w1.EndTime) || ' -> ' || MIN(w2.StartTime) FROM WiFiSessions w1 JOIN WiFiSessions w2 ON w1.PersonID = w2.PersonID AND w1.EndTime < w2.StartTime WHERE w1.PersonID = p.PersonID AND w1.EndTime >= '2024-10-20 00:00' AND w2.StartTime <= '2024-10-20 02:00') AS WiFiGap, (SELECT COUNT(*) FROM LibraryCheckouts lc JOIN Books b ON lc.BookID = b.BookID WHERE lc.PersonID = p.PersonID AND lc.ReturnDate IS NULL AND (b.Author = 'Margaret Blackwood' OR b.Author = 'Elias Blackwood' OR b.Genre LIKE '%Sealed%' OR b.Title LIKE '%Adoption%')) AS HeldEvidenceBooks, (SELECT wsl.FileName FROM WritingSoftwareLog wsl WHERE wsl.Action = 'Delete' AND wsl.EventTime BETWEEN '2024-10-20 00:30' AND '2024-10-20 01:30' LIMIT 1) AS DeletedFromVictimLaptop, (SELECT pe.ItemName FROM PhysicalEvidence pe WHERE pe.MatchedPersonID = p.PersonID AND pe.ItemName LIKE '%凶器%' LIMIT 1) AS WeaponEvidence FROM Persons p WHERE p.PersonID = 7"
 };
 
 // ============================================================

@@ -894,6 +894,12 @@ function toggleHistory() {
 }
 
 function runQuery() {
+  // Pacing gate is up — the player must click 继续调查 first. Guards the
+  // Ctrl/Cmd+Enter shortcut path (the Run button is already disabled).
+  if (BMM2.awaitingContinue) {
+    showToast("先点右侧「继续调查 →」。", "warn");
+    return;
+  }
   const ed = document.getElementById("sql-editor");
   const sql = (ed.value || "").trim();
   if (!sql) { showToast("空查询。", "warn"); return; }
@@ -1065,14 +1071,15 @@ async function completeCurrentTask(t, sql) {
   // Brennan reacts
   await speakOutro(t);
 
-  // Onboarding tutorial — fire ONCE after Ch0.1 outro finishes, BEFORE the
-  // Ch1 scene-before runs. Awaiting it here means the popover is fully closed
-  // before any cutscene starts, eliminating the "flash → cutscene → flash"
-  // race the player saw earlier.
+  // Pacing gate — NOTHING auto-chains into the next chapter or cutscene.
+  // The player reads Brennan's reaction, then clicks 继续调查 when ready.
+  // For Ch0.1 the onboarding modal itself is the gate (its own 继续 button).
   if (t.id === "0.1" && !BMM2.state.tutorialShown) {
     BMM2.state.tutorialShown = true;
     save();
     await showTutorialPopoverAsync();
+  } else {
+    await waitForContinue();
   }
 
   // Trigger ritual if any
@@ -1110,19 +1117,60 @@ async function completeCurrentTask(t, sql) {
     }
   }
 
-  // Advance to next task
+  // Advance to next task. No setTimeout — the 继续调查 gate above already
+  // gave the player a deliberate pause; chain straight into the next beat.
   if (isComplete()) {
     refreshTopbar();
   } else {
-    setTimeout(() => {
-      refreshTaskCard();
-      // Load next task's starter
-      const nextT = currentTask();
-      const ed = document.getElementById("sql-editor");
-      if (ed && nextT && !BMM2.state.queries[nextT.id]) ed.value = nextT.starter || "";
-      speakCurrentIntro();
-    }, 800);
+    refreshTaskCard();
+    const nextT = currentTask();
+    const ed = document.getElementById("sql-editor");
+    if (ed && nextT && !BMM2.state.queries[nextT.id]) ed.value = nextT.starter || "";
+    speakCurrentIntro();
   }
+}
+
+// ============================================================
+// Pacing gate — shows a "继续调查 →" button and resolves only when the
+// player clicks it (or presses Enter). While it is up, the Run button is
+// disabled so a stray query can't grade against the next task. This is
+// what stops the game auto-racing through outro → cutscene → next intro.
+// ============================================================
+function waitForContinue() {
+  return new Promise(resolve => {
+    const host = document.querySelector(".brennan-actions");
+    if (!host) { resolve(); return; }
+    host.querySelectorAll(".continue-gate").forEach(el => el.remove());
+
+    const runBtn = document.getElementById("btn-run");
+    if (runBtn) runBtn.disabled = true;
+    BMM2.awaitingContinue = true;
+
+    const btn = document.createElement("button");
+    btn.className = "continue-gate";
+    btn.textContent = "继续调查 →";
+
+    function finish() {
+      window.removeEventListener("keydown", onKey);
+      BMM2.awaitingContinue = false;
+      if (runBtn) runBtn.disabled = false;
+      btn.remove();
+      resolve();
+    }
+    function onKey(e) {
+      if (e.key === "Enter" &&
+          document.activeElement &&
+          document.activeElement.id !== "sql-editor" &&
+          document.activeElement.id !== "notes-area") {
+        e.preventDefault();
+        finish();
+      }
+    }
+    btn.addEventListener("click", finish, { once: true });
+    window.addEventListener("keydown", onKey);
+    host.prepend(btn);
+    btn.scrollIntoView({ block: "nearest" });
+  });
 }
 
 function addScore(delta) {
