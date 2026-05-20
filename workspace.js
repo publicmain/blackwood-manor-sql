@@ -982,6 +982,9 @@ function restoreClues() {
 // ============================================================
 function refreshTaskCard() {
   const card = document.getElementById("task-card");
+  // The workspace may not be mounted yet — e.g. an opening-prologue
+  // cutscene closing calls this before the task card exists. Bail safely.
+  if (!card) return;
   const t = currentTask();
   if (!t) {
     card.style.display = "none";
