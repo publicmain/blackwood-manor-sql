@@ -280,11 +280,12 @@ function workspaceShell() {
       </div>
       <div class="task-card" id="task-card">
         <div class="head">
-          <span>当前任务</span>
+          <span id="task-chapter">当前任务</span>
           <span class="close" id="task-close" title="收起">−</span>
         </div>
         <h3 id="task-title">—</h3>
-        <p id="task-body">—</p>
+        <div class="task-brief" id="task-brief"></div>
+        <p class="task-detail" id="task-body">—</p>
         <div class="hint-row">
           <button id="task-hint">💡 提示</button>
           <button id="task-skip-anim" title="跳过台词打字动画">⏩ 台词</button>
@@ -333,6 +334,7 @@ function workspaceShell() {
         <span class="spacer"></span>
         <button id="btn-result-close" title="关闭">×</button>
       </div>
+      <div class="result-gain" id="result-gain" style="display:none;"></div>
       <div class="result-body" id="result-body"></div>
     </div>
 
@@ -987,7 +989,29 @@ function refreshTaskCard() {
   }
   card.style.display = "block";
   card.classList.remove("minimized");
+  // Chapter / progress line.
+  const chEl = document.getElementById("task-chapter");
+  if (chEl) {
+    chEl.textContent = t.chapter === 0
+      ? "教程 · 热身"
+      : `第 ${t.chapter} 章 / 共 11 章`;
+  }
   document.getElementById("task-title").textContent = t.title;
+  // Plain-language brief — 做什么 / 为什么 — for weak-comprehension players.
+  const brief = window.BMM2_BRIEF && window.BMM2_BRIEF[t.id];
+  const briefEl = document.getElementById("task-brief");
+  if (briefEl) {
+    if (brief) {
+      briefEl.innerHTML =
+        `<div class="tb-row"><div class="tb-label">🎯 这一步要做什么</div>` +
+        `<div class="tb-text">${esc(brief.goal)}</div></div>` +
+        `<div class="tb-row"><div class="tb-label">❓ 为什么要查它</div>` +
+        `<div class="tb-text">${esc(brief.why)}</div></div>`;
+      briefEl.style.display = "block";
+    } else {
+      briefEl.style.display = "none";
+    }
+  }
   document.getElementById("task-body").textContent = t.task;
   document.getElementById("task-close").onclick = () => {
     card.classList.add("minimized");
@@ -1027,6 +1051,7 @@ function skipTaskForStory() {
       const last = results[results.length - 1];
       if (last && last.values && last.values.length) {
         showResultPanel(last.columns, last.values);
+        showResultGain(t.id);
         addClues(last.columns, last.values);
       }
     } catch (e) { /* canonical failed — story still continues */ }
@@ -1345,6 +1370,8 @@ function runQuery() {
   }
   const verdict = window.BMM2_grade(t, last, sql);
   if (verdict.pass) {
+    // Plain-language "你查到了什么" note on the result panel.
+    showResultGain(t.id);
     // Tutorial flag is consumed INSIDE completeCurrentTask so it fires
     // synchronously between Ch0 outro and Ch1 scene-before — preventing the
     // earlier race where the popover briefly flashed, then ch1_open scene
@@ -1415,6 +1442,10 @@ function showResultPanel(columns, values) {
   const body  = document.getElementById("result-body");
   const meta  = document.getElementById("result-meta");
   if (!panel || !body) return;
+  // A fresh query — clear any previous "你查到了" gain note; it's only
+  // re-shown if this query actually completes the task.
+  const gainEl = document.getElementById("result-gain");
+  if (gainEl) { gainEl.style.display = "none"; gainEl.textContent = ""; }
   meta.textContent = `${values.length} 行 · ${columns.length} 列`;
   // Build the table
   let html = '<table class="result-table"><thead><tr>';
@@ -1439,6 +1470,17 @@ function hideResultPanel() {
   if (!panel) return;
   panel.classList.remove("open");
   panel.setAttribute("aria-hidden", "true");
+}
+
+// Show the plain-language "你查到了什么" note on the result panel — called
+// when a task is completed (solved or skipped) so a weak-comprehension
+// player gets told, in one sentence, what this step achieved.
+function showResultGain(taskId) {
+  const gainEl = document.getElementById("result-gain");
+  const brief = window.BMM2_BRIEF && window.BMM2_BRIEF[taskId];
+  if (!gainEl || !brief || !brief.gain) return;
+  gainEl.innerHTML = `<span class="rg-tag">📌 你查到了</span>${esc(brief.gain)}`;
+  gainEl.style.display = "block";
 }
 
 // Helper: have Brennan say a short reaction line.

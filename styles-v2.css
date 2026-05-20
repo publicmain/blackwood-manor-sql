@@ -520,6 +520,48 @@ input, textarea { user-select: text; }
   border-color: var(--accent-gold); font-weight: 600;
 }
 
+/* Task brief — plain-language 做什么 / 为什么, for weak-comprehension players */
+.task-brief {
+  margin: 8px 0 6px;
+  display: flex; flex-direction: column; gap: 7px;
+}
+.tb-row {
+  background: rgba(184,153,104,0.06);
+  border-left: 2px solid var(--accent-gold);
+  padding: 6px 9px;
+}
+.tb-label {
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--accent-gold); letter-spacing: 0.06em;
+  margin-bottom: 3px;
+}
+.tb-text {
+  font-family: var(--font-serif); font-size: 13px;
+  line-height: 1.6; color: var(--text-primary);
+}
+/* The technical SQL requirement, now secondary to the plain brief above. */
+.task-card .task-detail {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--text-muted); line-height: 1.55;
+  margin: 4px 0 0;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border-subtle);
+}
+
+/* "你查到了什么" note on the result panel */
+.result-gain {
+  font-family: var(--font-serif); font-size: 13px;
+  line-height: 1.6; color: var(--text-primary);
+  padding: 9px 16px;
+  background: rgba(90,140,94,0.12);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.result-gain .rg-tag {
+  font-family: var(--font-mono); font-size: 10px;
+  color: #8db98c; letter-spacing: 0.08em;
+  margin-right: 8px;
+}
+
 /* Story-first skip — always available so the SQL never blocks the story. */
 #task-skip-story {
   display: block; width: 100%;
