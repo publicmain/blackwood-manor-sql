@@ -1342,10 +1342,14 @@ async function completeCurrentTask(t, sql) {
   bumpScore();
   refreshTopbar();
 
+  // Gate A — let the player actually LOOK at the query result before
+  // Brennan's analysis writes itself out in the right rail.
+  await waitForContinue("查询正确 ✓ 看完下方结果，听 Brennan 分析 →");
+
   // Brennan reacts
   await speakOutro(t);
 
-  // Pacing gate — NOTHING auto-chains into the next chapter or cutscene.
+  // Gate B — NOTHING auto-chains into the next chapter or cutscene.
   // The player reads Brennan's reaction, then clicks 继续调查 when ready.
   // For Ch0.1 the onboarding modal itself is the gate (its own 继续 button).
   if (t.id === "0.1" && !BMM2.state.tutorialShown) {
@@ -1353,7 +1357,7 @@ async function completeCurrentTask(t, sql) {
     save();
     await showTutorialPopoverAsync();
   } else {
-    await waitForContinue();
+    await waitForContinue("继续调查 →");
   }
 
   // Trigger ritual if any
@@ -1411,7 +1415,7 @@ async function completeCurrentTask(t, sql) {
 // disabled so a stray query can't grade against the next task. This is
 // what stops the game auto-racing through outro → cutscene → next intro.
 // ============================================================
-function waitForContinue() {
+function waitForContinue(label) {
   return new Promise(resolve => {
     const host = document.querySelector(".brennan-actions");
     if (!host) { resolve(); return; }
@@ -1423,7 +1427,7 @@ function waitForContinue() {
 
     const btn = document.createElement("button");
     btn.className = "continue-gate";
-    btn.textContent = "继续调查 →";
+    btn.textContent = label || "继续调查 →";
 
     function finish() {
       window.removeEventListener("keydown", onKey);

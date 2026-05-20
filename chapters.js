@@ -48,41 +48,52 @@
   }
 
   // ---------- Ch 9 · Sealed adoption reveal ----------
-  async function ritualCh9() {
-    const veil = document.getElementById("modal-veil");
-    const m = document.getElementById("modal-content");
-    m.className = "modal reveal-modal";
-    m.innerHTML = `
-      <header><h2 style="font-family: var(--font-serif); font-size: 18px; letter-spacing: 0.16em; color: var(--accent-blood-2);">封存档案 · UNSEALED</h2><span class="close">×</span></header>
-      <div class="reveal-body">
-        <img class="reveal-portrait" src="portraits/Margaret.png" alt="Margaret Blackwood" loading="lazy" decoding="async"/>
-        <h2>Margaret Blackwood</h2>
-        <div class="reveal-yrs">1964 — 1986 · 自杀 · 22 岁</div>
-        <div class="reveal-banner">封存的领养记录浮出水面。</div>
-        <div class="reveal-text">
-          一九八〇年，Margaret 十六岁。<br/>
-          孩子由 Robert 与 Patricia Wright 法定领养，记录封存。<br/>
-          六年后她从黑木庄园的井里走了。<br/><br/>
-          <b>Eleanor Wright 是 Margaret Blackwood 的女儿。</b><br/>
-          Elias 是 Margaret 的兄弟。<br/>
-          Eleanor 当了他三年的传记作者。
+  // Resolves ONLY when the player dismisses the modal — so the chapter-close
+  // cutscene can never interrupt the reveal mid-read.
+  function ritualCh9() {
+    return new Promise(resolve => {
+      const veil = document.getElementById("modal-veil");
+      const m = document.getElementById("modal-content");
+      m.className = "modal reveal-modal";
+      m.innerHTML = `
+        <header><h2 style="font-family: var(--font-serif); font-size: 18px; letter-spacing: 0.16em; color: var(--accent-blood-2);">封存档案 · UNSEALED</h2><span class="close">×</span></header>
+        <div class="reveal-body">
+          <img class="reveal-portrait" src="portraits/Margaret.png" alt="Margaret Blackwood" loading="lazy" decoding="async"/>
+          <h2>Margaret Blackwood</h2>
+          <div class="reveal-yrs">1964 — 1986 · 自杀 · 22 岁</div>
+          <div class="reveal-banner">封存的领养记录浮出水面。</div>
+          <div class="reveal-text">
+            一九八〇年，Margaret 十六岁。<br/>
+            孩子由 Robert 与 Patricia Wright 法定领养，记录封存。<br/>
+            六年后她从黑木庄园的井里走了。<br/><br/>
+            <b>Eleanor Wright 是 Margaret Blackwood 的女儿。</b><br/>
+            Elias 是 Margaret 的兄弟。<br/>
+            Eleanor 当了他三年的传记作者。
+          </div>
         </div>
-      </div>
-    `;
-    veil.classList.add("open");
-    m.querySelector(".close").addEventListener("click", () => veil.classList.remove("open"));
-    veil.addEventListener("click", e => { if (e.target === veil) veil.classList.remove("open"); });
-    // Wait a bit before allowing close
-    await sleep(2000);
+        <div class="modal-foot"><button class="modal-continue">我明白了，继续 →</button></div>
+      `;
+      veil.classList.add("open");
+      let done = false;
+      function dismiss() {
+        if (done) return;
+        done = true;
+        veil.classList.remove("open");
+        resolve();
+      }
+      m.querySelector(".close").addEventListener("click", dismiss);
+      m.querySelector(".modal-continue").addEventListener("click", dismiss);
+      veil.addEventListener("click", e => { if (e.target === veil) dismiss(); });
+    });
   }
 
   // ---------- Ch 10 · Memo decryption + typewriter ----------
-  async function ritualCh10() {
-    // Open the doc modal for Memo_PersonalNote with typewriter
-    if (window.BMM2_workspace?.openClueDetail) {
-      // Construct a clue-like entry if not in index
+  // Resolves ONLY when the player dismisses the modal.
+  function ritualCh10() {
+    return new Promise(resolve => {
       const veil = document.getElementById("modal-veil");
       const m = document.getElementById("modal-content");
+      if (!veil || !m || !window.BMM2_workspace) { resolve(); return; }
       m.className = "modal doc-modal";
       const memo = window.BMM2_workspace.runRows(`SELECT EventTime, Action, FileName, CharCount, PreviewText FROM WritingSoftwareLog WHERE FileName='Memo_PersonalNote.scriv' ORDER BY EventTime`);
       const full = memo.find(r => r[4] && !String(r[4]).startsWith("["))?.[4] ||
@@ -103,12 +114,22 @@
             <div class="doc-body" id="doc-body"></div>
           </div>
         </div>
+        <div class="modal-foot"><button class="modal-continue">看完了，继续 →</button></div>
       `;
       veil.classList.add("open");
-      m.querySelector(".close").addEventListener("click", () => veil.classList.remove("open"));
-      veil.addEventListener("click", e => { if (e.target === veil) veil.classList.remove("open"); });
+      let done = false;
+      function dismiss() {
+        if (done) return;
+        done = true;
+        clearInterval(id);
+        veil.classList.remove("open");
+        resolve();
+      }
+      m.querySelector(".close").addEventListener("click", dismiss);
+      m.querySelector(".modal-continue").addEventListener("click", dismiss);
+      veil.addEventListener("click", e => { if (e.target === veil) dismiss(); });
 
-      // Typewriter
+      // Typewriter reveal of the deleted memo's text.
       const body = m.querySelector("#doc-body");
       let i = 0;
       const txt = full;
@@ -116,8 +137,7 @@
         body.innerHTML = window.BMM2_cards.highlightKeywords(window.BMM2_cards.escapeHtml(txt.slice(0, ++i)));
         if (i >= txt.length) clearInterval(id);
       }, 18);
-    }
-    await sleep(2000);
+    });
   }
 
   // ---------- Ch 11 · CASE CLOSED stamp + report ----------
@@ -232,7 +252,7 @@
             <div class="stat"><div class="label">查询数</div><div class="val">${window.BMM2.state.stats.queriesRun}</div></div>
             <div class="stat"><div class="label">错误数</div><div class="val">${window.BMM2.state.stats.errors}</div></div>
             <div class="stat"><div class="label">收集线索</div><div class="val">${Object.keys(window.BMM2.state.clues || {}).length}</div></div>
-            <div class="stat"><div class="label">完成章节</div><div class="val">${window.BMM2.state.completedTasks.length} / 29</div></div>
+            <div class="stat"><div class="label">完成关卡</div><div class="val">${window.BMM2.state.completedTasks.length} / ${window.BMM2_TASKS.length}</div></div>
             <div class="stat"><div class="label">提示用次</div><div class="val">${window.BMM2.state.stats.hintsUsed}</div></div>
           </div>
         </div>

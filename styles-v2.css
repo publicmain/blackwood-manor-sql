@@ -1418,6 +1418,20 @@ input, textarea { user-select: text; }
 }
 
 /* Document modal — paper feel */
+/* Player-dismiss footer for ritual modals (Ch9 reveal, Ch10 memo) — the
+   ritual waits for this click so a cutscene can't interrupt the reveal. */
+.modal-foot {
+  display: flex; justify-content: flex-end;
+  padding: 12px 18px 16px;
+}
+.modal-continue {
+  background: var(--accent-gold); color: var(--bg-deepest);
+  border: 1px solid var(--accent-gold); cursor: pointer;
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+  letter-spacing: 0.14em; padding: 9px 24px; border-radius: 2px;
+}
+.modal-continue:hover { background: var(--accent-gold-2); }
+
 .doc-modal { width: 640px; }
 .doc-modal .doc-paper {
   background: #2a2620;
