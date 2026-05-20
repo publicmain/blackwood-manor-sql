@@ -1782,6 +1782,8 @@ input, textarea { user-select: text; }
 /* Ch9 family-reveal modal */
 .reveal-modal .reveal-body {
   padding: 30px; text-align: center;
+  max-height: calc(88vh - 64px);
+  overflow-y: auto;
 }
 .reveal-modal .reveal-portrait {
   width: 200px; height: 250px; margin: 0 auto;

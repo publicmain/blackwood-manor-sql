@@ -1729,11 +1729,25 @@ async function completeCurrentTask(t, sql, opts) {
   renderDashboard();   // refresh the 案情进展 glance now this chapter may be done
   if (isComplete()) {
     refreshTopbar();
+    // Case closed — guarantee the final report opens, even if the Ch11
+    // stamp ritual was interrupted or a finale cutscene veil covered it.
+    if (window.BMM2_chapters && window.BMM2_chapters.openCaseReport) {
+      window.BMM2_chapters.openCaseReport();
+    }
   } else {
     refreshTaskCard();
     const nextT = currentTask();
     const ed = document.getElementById("sql-editor");
-    if (ed && nextT && !BMM2.state.queries[nextT.id]) ed.value = starterFor(nextT);
+    // Always load the next task's scaffold FRESH. Tasks advance strictly
+    // forward, so the next task has not been attempted — any queries[]
+    // entry for it would be a mis-attributed save (e.g. a stray keystroke
+    // landed while currentTaskIdx had already advanced) and must not be
+    // allowed to block the reload, or the editor keeps the prior query.
+    if (ed && nextT) {
+      delete BMM2.state.queries[nextT.id];
+      ed.value = starterFor(nextT);
+      save();
+    }
     speakCurrentIntro();
   }
 }
@@ -1910,13 +1924,14 @@ function initPersonHoverCard() {
   }
   function hide() { card.style.display = "none"; }
 
+  // One delegated handler: mouseover fires for every element the cursor
+  // enters. Over a name → show; over anything else → hide. This dismisses
+  // the card reliably the instant the mouse leaves a name (the old
+  // separate mouseout handler could leave the card stuck).
   document.addEventListener("mouseover", e => {
     const ref = e.target.closest && e.target.closest(".person-ref");
     if (ref) show(ref);
-  });
-  document.addEventListener("mouseout", e => {
-    const ref = e.target.closest && e.target.closest(".person-ref");
-    if (ref) hide();
+    else hide();
   });
   document.addEventListener("click", e => {
     const ref = e.target.closest && e.target.closest(".person-ref");
