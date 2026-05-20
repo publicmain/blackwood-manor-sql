@@ -196,12 +196,22 @@ function mountWorkspace() {
   bindTerminal();
   bindRightRail();
 
-  // First time into the workspace — show the 登场人物 briefing so the
-  // player meets the cast before facing a wall of foreign names.
-  if (!BMM2.state.castShown) {
-    BMM2.state.castShown = true;
-    save();
-    setTimeout(() => openCaseFile("cast"), 450);
+  // First run: pick a difficulty, THEN meet the cast. On later runs both
+  // are skipped (flags persisted in state).
+  function showCastOnce() {
+    if (!BMM2.state.castShown) {
+      BMM2.state.castShown = true;
+      save();
+      setTimeout(() => openCaseFile("cast"), 300);
+    }
+  }
+  if (!BMM2.state.difficulty) {
+    setTimeout(() => chooseDifficulty(() => {
+      reloadCurrentStarter();   // apply the chosen scaffold to the editor
+      showCastOnce();
+    }), 300);
+  } else {
+    showCastOnce();
   }
 
   // Start the dialogue queue from current task
@@ -1119,14 +1129,96 @@ function showHint(text) {
 }
 
 // ============================================================
+// DIFFICULTY — the player picks a level; it controls how much SQL is
+// pre-loaded into the editor for each task:
+//   easy   → the full correct query (read it, run it, learn by example)
+//   medium → the scaffold with ___ blanks to fill (default)
+//   hard   → just the task comment; write the whole query yourself
+// ============================================================
+const DIFFICULTY_LABEL = { easy: "简单", medium: "普通", hard: "困难" };
+
+function starterFor(task) {
+  if (!task) return "";
+  const diff = BMM2.state.difficulty || "medium";
+  if (diff === "easy") {
+    const ans = window.BMM2_ANSWERS && window.BMM2_ANSWERS[task.id];
+    if (ans) {
+      return `-- 简单模式 · 完整 SQL 已写好。读懂它，然后点 ▶ Run。\n`
+           + `-- 想挑战的话，也可以自己改写。\n\n${ans};`;
+    }
+    return task.starter || "";
+  }
+  if (diff === "hard") {
+    // Keep only the leading -- comment lines from the medium scaffold.
+    const lines = (task.starter || "").split("\n");
+    const comments = [];
+    for (const l of lines) {
+      if (l.trim().startsWith("--")) comments.push(l);
+      else if (comments.length) break;   // stop at the first SQL line
+    }
+    const head = comments.length ? comments.join("\n") : `-- ${task.task || ""}`;
+    return `${head}\n-- 困难模式 · 完整的 SQL 由你独立写出。\n\n`;
+  }
+  return task.starter || "";   // medium — the ___ scaffold
+}
+
+// Reload the editor with the current task's scaffold for the active
+// difficulty (called after the player picks / changes difficulty).
+function reloadCurrentStarter() {
+  const ed = document.getElementById("sql-editor");
+  const t = currentTask();
+  if (!ed || !t) return;
+  delete BMM2.state.queries[t.id];
+  ed.value = starterFor(t);
+  save();
+}
+
+// First-run difficulty picker. Resolves via onDone callback once chosen.
+function chooseDifficulty(onDone) {
+  const veil = document.getElementById("modal-veil");
+  const m = document.getElementById("modal-content");
+  if (!veil || !m) { if (onDone) onDone(); return; }
+  m.className = "modal difficulty-modal";
+  m.innerHTML = `
+    <header><h2 style="font-family:var(--font-serif); font-size:17px; letter-spacing:0.12em;">选择难度</h2></header>
+    <div class="modal-body">
+      <p class="cf-intro">这桩案子要靠 SQL 查出来。难度决定每道题在编辑器里<b>预先帮你写好多少代码</b>——随时能在 ⚙ 设置里改。</p>
+      <div class="diff-options">
+        <button class="diff-opt" data-d="easy">
+          <div class="diff-name">简单</div>
+          <div class="diff-desc">完整的 SQL 已经写好，你读懂它、点运行即可。适合刚接触 SQL 的同学。</div>
+        </button>
+        <button class="diff-opt recommended" data-d="medium">
+          <div class="diff-name">普通 <span class="diff-rec">推荐</span></div>
+          <div class="diff-desc">给出 SQL 框架，关键处留 <code>___</code> 空格由你填写。适合学过基础语法的同学。</div>
+        </button>
+        <button class="diff-opt" data-d="hard">
+          <div class="diff-name">困难</div>
+          <div class="diff-desc">只给题目要求，完整 SQL 由你从零独立写出。留给学有余力的同学。</div>
+        </button>
+      </div>
+    </div>
+  `;
+  veil.classList.add("open");
+  m.querySelectorAll(".diff-opt").forEach(b => {
+    b.addEventListener("click", () => {
+      BMM2.state.difficulty = b.dataset.d;
+      save();
+      closeModal();
+      if (onDone) onDone();
+    });
+  });
+}
+
+// ============================================================
 // SQL TERMINAL
 // ============================================================
 function bindTerminal() {
   const ed = document.getElementById("sql-editor");
   // Load starter
   const t = currentTask();
-  if (t && !BMM2.state.queries[t.id]) ed.value = t.starter || "";
-  else ed.value = BMM2.state.queries[t?.id] || (t?.starter || "");
+  if (t && !BMM2.state.queries[t.id]) ed.value = starterFor(t);
+  else ed.value = BMM2.state.queries[t?.id] || starterFor(t);
 
   ed.addEventListener("input", () => {
     const tt = currentTask();
@@ -1148,7 +1240,7 @@ function bindTerminal() {
   document.getElementById("btn-run").addEventListener("click", runQuery);
   document.getElementById("btn-clear").addEventListener("click", () => { ed.value = ""; ed.focus(); });
   document.getElementById("btn-starter").addEventListener("click", () => {
-    const tt = currentTask(); if (tt) ed.value = tt.starter || "";
+    const tt = currentTask(); if (tt) ed.value = starterFor(tt);
   });
   document.getElementById("btn-history").addEventListener("click", toggleHistory);
   document.getElementById("btn-result-close")?.addEventListener("click", hideResultPanel);
@@ -1445,7 +1537,7 @@ async function completeCurrentTask(t, sql, opts) {
     refreshTaskCard();
     const nextT = currentTask();
     const ed = document.getElementById("sql-editor");
-    if (ed && nextT && !BMM2.state.queries[nextT.id]) ed.value = nextT.starter || "";
+    if (ed && nextT && !BMM2.state.queries[nextT.id]) ed.value = starterFor(nextT);
     speakCurrentIntro();
   }
 }
@@ -1856,6 +1948,14 @@ function openSettings() {
       <p>探案分: <b style="color:var(--accent-gold)">${BMM2.state.score}</b> · 已归档线索: ${BMM2.state.completedTasks.length}</p>
       <p>已运行查询: ${BMM2.state.stats.queriesRun} · 错误: ${BMM2.state.stats.errors} · 提示用次: ${BMM2.state.stats.hintsUsed}</p>
       <hr style="border: none; border-top: 1px solid var(--border-subtle); margin: 16px 0;"/>
+      <p style="color: var(--accent-gold); letter-spacing:0.1em;">SQL 难度（决定编辑器预加载多少代码）</p>
+      <div class="settings-diff" style="display:flex; gap:6px; margin:6px 0 4px;">
+        ${["easy","medium","hard"].map(d =>
+          `<button class="set-diff ${ (BMM2.state.difficulty||"medium")===d ? "active":"" }" data-d="${d}">${DIFFICULTY_LABEL[d]}</button>`
+        ).join("")}
+      </div>
+      <p style="color: var(--text-muted); font-size:10px; line-height:1.6;">简单=完整答案 · 普通=填空框架 · 困难=只给题目。切换后当前题的编辑器会重新加载。</p>
+      <hr style="border: none; border-top: 1px solid var(--border-subtle); margin: 16px 0;"/>
       <div style="display:flex; gap: 10px; flex-wrap: wrap;">
         <button id="btn-reset-game" style="background: var(--accent-blood); color: var(--text-primary); border: 1px solid var(--accent-blood); padding: 8px 16px; cursor: pointer; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em;">重新开始游戏</button>
         <button id="btn-show-report" ${isComplete()?"":"disabled"} style="background: transparent; color: var(--accent-gold); border: 1px solid var(--accent-gold); padding: 8px 16px; cursor: ${isComplete()?"pointer":"not-allowed"}; font-family: var(--font-mono); font-size: 11px; opacity: ${isComplete()?"1":"0.5"};">查看结案报告</button>
@@ -1864,6 +1964,16 @@ function openSettings() {
   `;
   veil.classList.add("open");
   m.querySelector(".close").addEventListener("click", closeModal);
+  m.querySelectorAll(".set-diff").forEach(b => {
+    b.addEventListener("click", () => {
+      BMM2.state.difficulty = b.dataset.d;
+      save();
+      reloadCurrentStarter();
+      m.querySelectorAll(".set-diff").forEach(x => x.classList.remove("active"));
+      b.classList.add("active");
+      showToast(`难度已切换为「${DIFFICULTY_LABEL[b.dataset.d]}」`, "ok");
+    });
+  });
   m.querySelector("#btn-reset-game").addEventListener("click", () => {
     if (confirm("确定要清空所有进度，回到开始画面吗？")) reset();
   });

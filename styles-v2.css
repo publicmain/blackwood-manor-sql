@@ -470,6 +470,56 @@ input, textarea { user-select: text; }
 }
 .task-card .hint-row button:hover { border-color: var(--accent-gold); color: var(--accent-gold); }
 
+/* ============================================================
+   DIFFICULTY PICKER — first-run level select
+   ============================================================ */
+.difficulty-modal { width: 540px; max-width: 92vw; }
+.diff-options { display: flex; flex-direction: column; gap: 9px; margin-top: 6px; }
+.diff-opt {
+  text-align: left; cursor: pointer;
+  background: rgba(26,34,48,0.7);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--border-strong);
+  padding: 12px 14px; border-radius: 2px;
+  transition: border-color 150ms, transform 150ms, background 150ms;
+}
+.diff-opt:hover {
+  border-left-color: var(--accent-gold);
+  background: rgba(184,153,104,0.08);
+  transform: translateY(-1px);
+}
+.diff-opt.recommended { border-left-color: var(--accent-gold); }
+.diff-name {
+  font-family: var(--font-serif); font-size: 15px;
+  color: var(--accent-gold); margin-bottom: 3px;
+}
+.diff-rec {
+  font-family: var(--font-mono); font-size: 9px;
+  background: var(--accent-gold); color: var(--bg-deepest);
+  padding: 1px 6px; border-radius: 2px; letter-spacing: 0.1em;
+  vertical-align: middle;
+}
+.diff-desc {
+  font-family: var(--font-serif); font-size: 12px;
+  color: var(--text-secondary); line-height: 1.6;
+}
+.diff-desc code {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--accent-gold); background: var(--bg-card); padding: 0 3px;
+}
+/* Difficulty switch inside Settings */
+.set-diff {
+  background: transparent; border: 1px solid var(--border-subtle);
+  color: var(--text-secondary); cursor: pointer;
+  font-family: var(--font-mono); font-size: 11px;
+  padding: 5px 16px; border-radius: 2px; letter-spacing: 0.08em;
+}
+.set-diff:hover { border-color: var(--accent-gold); color: var(--accent-gold); }
+.set-diff.active {
+  background: var(--accent-gold); color: var(--bg-deepest);
+  border-color: var(--accent-gold); font-weight: 600;
+}
+
 /* Story-first skip — always available so the SQL never blocks the story. */
 #task-skip-story {
   display: block; width: 100%;
