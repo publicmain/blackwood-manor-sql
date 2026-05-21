@@ -108,7 +108,7 @@ async function runOpeningSequence() {
   ]);
   if (BMM2.openingSkipped) return;
 
-  // Stage 4: Brennan monologue
+  // Stage 4: 布伦南 monologue
   const monoStage = document.getElementById("op-mono");
   await fadeIn(monoStage, 400);
   if (BMM2.openingSkipped) return;
@@ -120,7 +120,7 @@ async function runOpeningSequence() {
   const monologue =
 `风暴昨晚把主路由打掉了。本地服务器还活着——读卡器、Wi-Fi、酒窖盘点、监控元数据，全在。
 
-Elias Blackwood，六十七岁，三度获奖作家，今早八点半被秘书发现死在自己的书房。
+伊莱亚斯·布莱克伍德，六十七岁，三度获奖作家，今早八点半被秘书发现死在自己的书房。
 钝器击打头部。凶器是他自己的青铜书挡。
 法医说死亡时间在凌晨零点半到一点半之间。
 
@@ -134,7 +134,7 @@ async function enterWorkspace(animated) {
   BMM2.state.openingDone = true;
   save();
   const opening = document.getElementById("opening");
-  // Phase 1: fade out the police-file/Brennan monologue splash
+  // Phase 1: fade out the police-file/布伦南 monologue splash
   if (opening && animated !== false) {
     opening.style.transition = "opacity 600ms";
     opening.style.opacity = "0";
@@ -195,7 +195,7 @@ function mountWorkspace() {
   bindLeftRail();
   bindTerminal();
   bindRightRail();
-  initPersonHoverCard();   // hover cards over names in Brennan's dialogue
+  initPersonHoverCard();   // hover cards over names in 布伦南's dialogue
 
   // First run: pick a difficulty, THEN meet the cast. On later runs both
   // are skipped (flags persisted in state).
@@ -370,7 +370,7 @@ function workspaceShell() {
 }
 
 function brennanPhotoEl() {
-  // If portraits/Brennan.png exists, use it; otherwise emit an inline SVG
+  // If portraits/布伦南.png exists, use it; otherwise emit an inline SVG
   // silhouette so the right-rail looks like a redacted dossier portrait
   // rather than two flat letters.
   return `<div class="brennan-photo svg-portrait">
@@ -451,48 +451,48 @@ function refreshDrawer() {
 // ============================================================
 const CASEFILE_CAST = {
   victim: [
-    { pid: 1, en: "Elias Blackwood", zh: "伊莱亚斯·布莱克伍德", role: "死者 · 67 岁 · 三度获奖作家",
+    { pid: 1, en: "伊莱亚斯·布莱克伍德", zh: "伊莱亚斯·布莱克伍德", role: "死者 · 67 岁 · 三度获奖作家",
       rel: "本案死者", hook: "周日清晨被秘书发现死在书房，钝器（青铜书挡）击打头部。" }
   ],
   suspects: [
-    { pid: 2, en: "Vivienne Ashford", zh: "薇薇安·阿什福德", role: "前妻 · 庄园主人",
+    { pid: 2, en: "薇薇安·阿什福德", zh: "薇薇安·阿什福德", role: "前妻 · 庄园主人",
       rel: "前妻（2016 离婚）", hook: "离婚后仍住庄园，怕失去终身居住权。" },
-    { pid: 3, en: "Sophia Blackwood", zh: "索菲娅·布莱克伍德", role: "现任妻子 · 前编辑",
-      rel: "现任妻子（2020 结婚）", hook: "曾是 Elias 的编辑，婚前协议苛刻。" },
-    { pid: 4, en: "Marcus Thorne", zh: "马库斯·索恩", role: "文学经纪人（合作 22 年）",
-      rel: "经纪人", hook: "刚离婚、酗酒，怕被 Elias 解约而破产。" },
-    { pid: 5, en: "Iris Chen", zh: "艾莉丝·陈", role: "2023 年黑木奖得主 · 后辈作家",
-      rel: "门生", hook: "安静寡言，反复借阅 Elias 的成名作《沉默时刻》。" },
-    { pid: 6, en: "Julian Hartley", zh: "朱利安·哈特利", role: "同行 · 宿敌",
+    { pid: 3, en: "索菲娅·布莱克伍德", zh: "索菲娅·布莱克伍德", role: "现任妻子 · 前编辑",
+      rel: "现任妻子（2020 结婚）", hook: "曾是 伊莱亚斯 的编辑，婚前协议苛刻。" },
+    { pid: 4, en: "马库斯·索恩", zh: "马库斯·索恩", role: "文学经纪人（合作 22 年）",
+      rel: "经纪人", hook: "刚离婚、酗酒，怕被 伊莱亚斯 解约而破产。" },
+    { pid: 5, en: "艾莉丝·陈", zh: "艾莉丝·陈", role: "2023 年黑木奖得主 · 后辈作家",
+      rel: "门生", hook: "安静寡言，反复借阅 伊莱亚斯 的成名作《沉默时刻》。" },
+    { pid: 6, en: "朱利安·哈特利", zh: "朱利安·哈特利", role: "同行 · 宿敌",
       rel: "对手", hook: "连续三年屈居黑木奖亚军，妻子 2023 年去世。" },
-    { pid: 7, en: "Eleanor Wright", zh: "埃莉诺·赖特", role: "授权传记作者",
-      rel: "授权传记作者", hook: "为 Elias 写传记三年，剑桥三一学院出身。" },
-    { pid: 8, en: "Henrik Volkov", zh: "亨里克·沃尔科夫", role: "文学评论家",
-      rel: "评论家", hook: "俄裔，毒舌——骂过 Elias 最近四部小说。" }
+    { pid: 7, en: "埃莉诺·赖特", zh: "埃莉诺·赖特", role: "授权传记作者",
+      rel: "授权传记作者", hook: "为 伊莱亚斯 写传记三年，剑桥三一学院出身。" },
+    { pid: 8, en: "亨里克·沃尔科夫", zh: "亨里克·沃尔科夫", role: "文学评论家",
+      rel: "评论家", hook: "俄裔，毒舌——骂过 伊莱亚斯 最近四部小说。" }
   ],
   family: [
-    { pid: 14, en: "Margaret Blackwood", zh: "玛格丽特·布莱克伍德", role: "Elias 的妹妹（已故）",
+    { pid: 14, en: "玛格丽特·布莱克伍德", zh: "玛格丽特·布莱克伍德", role: "伊莱亚斯 的妹妹（已故）",
       rel: "妹妹", hook: "有抱负的作家，1986 年 22 岁自杀。" },
     { pid: 15, en: "查尔斯·布莱克伍德", zh: "查尔斯·布莱克伍德", role: "父亲（已故）",
-      rel: "父亲", hook: "Elias 与 Margaret 的父亲。" },
+      rel: "父亲", hook: "伊莱亚斯 与 玛格丽特 的父亲。" },
     { pid: 16, en: "亨丽埃塔·布莱克伍德", zh: "亨丽埃塔·布莱克伍德", role: "母亲（已故）",
-      rel: "母亲", hook: "Elias 与 Margaret 的母亲。" },
-    { pid: 17, en: "罗伯特·赖特", zh: "罗伯特·赖特", role: "Eleanor 的养父（已故）",
-      rel: "Eleanor 养父", hook: "Eleanor 的法定父亲。" },
-    { pid: 18, en: "帕特里夏·赖特", zh: "帕特里夏·赖特", role: "Eleanor 的养母（已故）",
-      rel: "Eleanor 养母", hook: "Eleanor 的法定母亲。" }
+      rel: "母亲", hook: "伊莱亚斯 与 玛格丽特 的母亲。" },
+    { pid: 17, en: "罗伯特·赖特", zh: "罗伯特·赖特", role: "埃莉诺 的养父（已故）",
+      rel: "埃莉诺 养父", hook: "埃莉诺 的法定父亲。" },
+    { pid: 18, en: "帕特里夏·赖特", zh: "帕特里夏·赖特", role: "埃莉诺 的养母（已故）",
+      rel: "埃莉诺 养母", hook: "埃莉诺 的法定母亲。" }
   ],
   staff: [
     { pid: 9, en: "Mrs Eileen Hodge", zh: "艾琳·霍奇太太", role: "管家",
       rel: "庄园员工", hook: "随身带一本记录宾客言行的笔记本。" },
     { pid: 10, en: "Mr Albert Pemberton", zh: "阿尔伯特·彭伯顿", role: "男管家",
       rel: "庄园员工", hook: "CCTV 监控系统的管理员。" },
-    { pid: 11, en: "Anton Volkov", zh: "安东·沃尔科夫", role: "园丁",
-      rel: "庄园员工", hook: "评论家 Henrik 疏远的儿子。" },
+    { pid: 11, en: "安东·沃尔科夫", zh: "安东·沃尔科夫", role: "园丁",
+      rel: "庄园员工", hook: "评论家 亨里克 疏远的儿子。" },
     { pid: 12, en: "Chef Pierre Dubois", zh: "皮埃尔·杜布瓦", role: "主厨",
       rel: "庄园员工", hook: "承办了周六的颁奖晚宴。" },
-    { pid: 13, en: "Sarah Whitcombe", zh: "萨拉·惠特科姆", role: "秘书",
-      rel: "Elias 的助理", hook: "周日上午发现尸体的人。" }
+    { pid: 13, en: "萨拉 Whitcombe", zh: "萨拉·惠特科姆", role: "秘书",
+      rel: "伊莱亚斯 的助理", hook: "周日上午发现尸体的人。" }
   ]
 };
 
@@ -586,7 +586,7 @@ const CASEFILE_TABLES = [
   ["Conversations",      "偷听对话",   "管家笔记本里记下的对话片段：说话人、听话人、地点、内容。"],
   ["CCTVFiles",          "监控文件",   "各房间监控录像的状态，包含被删除的录像。"],
   ["FamilyTree",         "家族关系",   "人物之间的亲属关系（部分领养记录被封存）。"],
-  ["WritingSoftwareLog", "写作日志",   "Elias 笔记本上 Scrivener 的自动保存与删除记录。"],
+  ["WritingSoftwareLog", "写作日志",   "伊莱亚斯 笔记本上 Scrivener 的自动保存与删除记录。"],
   ["PhysicalEvidence",   "现场物证",   "鉴证科采集的现场物证与指纹 / 纤维比对结果。"],
   ["PrizeHistory",       "获奖历史",   "黑木文学奖历年的得主与亚军。"]
 ];
@@ -953,16 +953,16 @@ function renderDashboard() {
 // never spoils ahead. Used by the dashboard glance and the 案件资料 panel.
 const CHAPTER_RECAP = {
   1:  "确认昨晚有 7 名 Guest 在庄园过夜——这就是嫌疑池。",
-  2:  "法医把死亡时间锁定在 00:30–01:30。这一小时里，只有 Eleanor Wright（埃莉诺·赖特）的门卡进出了书房。",
-  3:  "短信筛出三条动机：Marcus 怕破产、Vivienne 怕失去庄园、Eleanor 提到「日记本」「最后的篇章」。",
-  4:  "Vivienne 案发时段下酒窖取了一瓶 Pétrus——实为取回藏在酒窖的合同草稿。她有动机，但全程在酒窖与卧室，排除。",
-  5:  "借阅记录显示 Eleanor 借的全是 Margaret 的手稿、领养档案、抄袭法律书——这不是传记研究，是案件准备。",
-  6:  "Marcus 的 WiFi 整晚锁在自己房间，排除。Eleanor 的手机在 00:28–01:35 有 67 分钟空窗，整个死亡窗口不在任何 AP 上。",
-  7:  "管家偷听到：Eleanor 约 Elias「今夜，档案室」；Elias 当面对她说「名字刻在牌子上不等于家人」。",
-  8:  "书房、档案室、连接走廊都没有监控。死亡窗口的门禁显示只有 Eleanor 的卡碰过书房，其余六人都有不在场证明。",
-  9:  "封存的领养记录浮出：Eleanor 是 Margaret 的私生女，是 Elias 的外甥女——她当了三年他的传记作者。",
-  10: "写作日志暴露 Elias 两面：第七章写要认错，GalaSpeech 终稿却要当众反口。物证：书挡掌纹比中 Eleanor，死亡时间收窄到 00:50–01:05。",
-  11: "八列证据链完成——动机、机会、手段齐全。Eleanor Wright 被捕。"
+  2:  "法医把死亡时间锁定在 00:30–01:30。这一小时里，只有 埃莉诺·赖特 的门卡进出了书房。",
+  3:  "短信筛出三条动机：马库斯 怕破产、薇薇安 怕失去庄园、埃莉诺 提到「日记本」「最后的篇章」。",
+  4:  "薇薇安 案发时段下酒窖取了一瓶 Pétrus——实为取回藏在酒窖的合同草稿。她有动机，但全程在酒窖与卧室，排除。",
+  5:  "借阅记录显示 埃莉诺 借的全是 玛格丽特 的手稿、领养档案、抄袭法律书——这不是传记研究，是案件准备。",
+  6:  "马库斯 的 WiFi 整晚锁在自己房间，排除。埃莉诺 的手机在 00:28–01:35 有 67 分钟空窗，整个死亡窗口不在任何 AP 上。",
+  7:  "管家偷听到：埃莉诺 约 伊莱亚斯「今夜，档案室」；伊莱亚斯 当面对她说「名字刻在牌子上不等于家人」。",
+  8:  "书房、档案室、连接走廊都没有监控。死亡窗口的门禁显示只有 埃莉诺 的卡碰过书房，其余六人都有不在场证明。",
+  9:  "封存的领养记录浮出：埃莉诺 是 玛格丽特 的私生女，是 伊莱亚斯 的外甥女——她当了三年他的传记作者。",
+  10: "写作日志暴露 伊莱亚斯 两面：第七章写要认错，GalaSpeech 终稿却要当众反口。物证：书挡掌纹比中 埃莉诺，死亡时间收窄到 00:50–01:05。",
+  11: "八列证据链完成——动机、机会、手段齐全。埃莉诺·赖特 被捕。"
 };
 
 // True only when EVERY task of a chapter is completed.
@@ -1109,7 +1109,7 @@ function restoreClues() {
 }
 
 // ============================================================
-// TASK CARD + Brennan
+// TASK CARD + 布伦南
 // ============================================================
 function refreshTaskCard() {
   const card = document.getElementById("task-card");
@@ -1167,7 +1167,7 @@ function refreshTaskCard() {
 // optional. Any task can be skipped: the canonical query is run for
 // the player (so they still see the real data + clues), and the story
 // continues exactly as if they had solved it. No score is awarded for
-// a skip, but the full story — Brennan's reaction, rituals, cutscenes
+// a skip, but the full story — 布伦南's reaction, rituals, cutscenes
 // — plays out, so a player who writes zero SQL still reads the whole
 // murder mystery start to finish.
 // ============================================================
@@ -1242,7 +1242,7 @@ async function speakOutro(t) {
 }
 
 // ============================================================
-// Dialogue log: stack of past Brennan utterances visible above the
+// Dialogue log: stack of past 布伦南 utterances visible above the
 // active speech bubble. Each completed utterance becomes a card.
 // ============================================================
 function setBubbleTime() {
@@ -1570,12 +1570,12 @@ function showTutorialPopover(onContinue) {
       </h2>
     </header>
     <div class="modal-body" style="font-family: var(--font-serif); line-height: 1.7; font-size: 15px; color: var(--text-primary);">
-      <p><b style="color:var(--accent-gold)">这首先是一个故事。</b>一桩发生在黑木庄园的谋杀案，你会跟着 Brennan 一章章把它读完。</p>
-      <p>每一关有一道 SQL 小题——写对了，你就亲手查到了那条线索。<b style="color:var(--accent-gold)">但写不出来完全不要紧</b>：任务卡上永远有一个「⏭ 跳过此题 · 继续故事」按钮，点它就直接看到数据、听 Brennan 讲这一段，故事照样往下走。<b style="color:var(--accent-gold)">不写一行 SQL，也能读完整个完整的故事。</b></p>
+      <p><b style="color:var(--accent-gold)">这首先是一个故事。</b>一桩发生在黑木庄园的谋杀案，你会跟着 布伦南 一章章把它读完。</p>
+      <p>每一关有一道 SQL 小题——写对了，你就亲手查到了那条线索。<b style="color:var(--accent-gold)">但写不出来完全不要紧</b>：任务卡上永远有一个「⏭ 跳过此题 · 继续故事」按钮，点它就直接看到数据、听 布伦南 讲这一段，故事照样往下走。<b style="color:var(--accent-gold)">不写一行 SQL，也能读完整个完整的故事。</b></p>
       <p>看不懂外国人名、忘了有哪些表、想不起前面发生了什么？顶栏的 <b style="color:var(--accent-gold)">📂 案件资料</b> 里有：人物表、数据表、庄园地图、案情进展回顾——随时可查。</p>
       <p>跑过的查询结果会归档到左侧<b style="color:var(--accent-gold)">线索栏</b>；中央<b style="color:var(--accent-gold)">案件概览</b>显示嫌疑人和进展；点嫌疑人卡片可看完整档案。</p>
       <p style="color: var(--text-secondary); font-style: italic; margin-top: 18px;">
-        Brennan：「慢慢来。重要的不是你查得多快——是你最后看懂了这个故事。」
+        布伦南：「慢慢来。重要的不是你查得多快——是你最后看懂了这个故事。」
       </p>
       <div style="text-align: center; margin-top: 22px;">
         <button id="btn-tutorial-continue" style="background: var(--accent-gold); color: var(--bg-deepest); border: none; padding: 10px 32px; cursor: pointer; font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.18em;">继续 →</button>
@@ -1650,7 +1650,7 @@ function showResultGain(taskId) {
   gainEl.style.display = "block";
 }
 
-// Helper: have Brennan say a short reaction line.
+// Helper: have 布伦南 say a short reaction line.
 // Wraps the proper (el, text, opts) signature; guarded against the
 // active intro/outro typewriter so we don't overlap the main task speech.
 function brennanReact(text) {
@@ -1683,12 +1683,12 @@ async function completeCurrentTask(t, sql, opts) {
   refreshTopbar();
 
   // Gate A — let the player actually LOOK at the query result before
-  // Brennan's analysis writes itself out in the right rail.
+  // 布伦南's analysis writes itself out in the right rail.
   await waitForContinue(skipped
-    ? "看完下方数据，听 Brennan 讲这一段 →"
-    : "查询正确 ✓ 看完下方结果，听 Brennan 分析 →");
+    ? "看完下方数据，听 布伦南 讲这一段 →"
+    : "查询正确 ✓ 看完下方结果，听 布伦南 分析 →");
 
-  // Brennan reacts + Gate B. The outro types AND the 继续 gate appears at
+  // 布伦南 reacts + Gate B. The outro types AND the 继续 gate appears at
   // the same time — clicking the gate fast-forwards the typewriter, so the
   // player never has to hunt for a separate "skip animation" button.
   if (t.id === "0.1" && !BMM2.state.tutorialShown) {
@@ -1858,7 +1858,7 @@ function openDialogueHistory() {
   const veil = document.getElementById("modal-veil");
   m.className = "modal";
   m.innerHTML = `
-    <header><h2 style="margin:0; font-family:var(--font-serif); font-size:18px; letter-spacing:0.14em;">Brennan 对话历史</h2><span class="close">×</span></header>
+    <header><h2 style="margin:0; font-family:var(--font-serif); font-size:18px; letter-spacing:0.14em;">布伦南 对话历史</h2><span class="close">×</span></header>
     <div class="modal-body" style="font-family:var(--font-serif); white-space:pre-wrap; line-height:1.7;">${esc(lines || "暂无对话历史。")}</div>
   `;
   veil.classList.add("open");
@@ -1896,7 +1896,7 @@ function clueDetailTable(clue) {
 
 // ============================================================
 // Person hover card — floating mini-dossier shown when the player
-// hovers a Chinese name (.person-ref span) inside Brennan's dialogue.
+// hovers a Chinese name (.person-ref span) inside 布伦南's dialogue.
 // Clicking the name opens the full dossier.
 // ============================================================
 let _personHoverCardEl = null;
@@ -2220,7 +2220,7 @@ function openHelp() {
     </header>
     <div class="modal-body" style="font-family: var(--font-serif); line-height: 1.65; font-size: 14px;">
       <p style="color: var(--accent-gold); letter-spacing: 0.08em; font-size: 12px;">— 案件 BMM-2024-1019</p>
-      <p>Elias Blackwood，67 岁，三度 Booker 提名作家。<b>周日 (10/20) 08:30</b> 被秘书发现死于自己的书房（Room 103）。钝器击打头部，凶器：书桌上的青铜书挡。</p>
+      <p>伊莱亚斯·布莱克伍德，67 岁，三度 布克 提名作家。<b>周日 (10/20) 08:30</b> 被秘书发现死于自己的书房（书房）。钝器击打头部，凶器：书桌上的青铜书挡。</p>
       <p>法医估算的<b style="color: var(--accent-blood);">死亡时间窗口：00:30 – 01:30</b>。一小时。</p>
       <p>当晚在庄园里的人：<b>7 位嘉宾</b> + <b>5 名常驻员工</b>。每个房间都有门禁刷卡，整栋楼有 Wi-Fi 日志。</p>
       <hr style="border: none; border-top: 1px solid var(--border-subtle); margin: 16px 0;"/>
@@ -2236,7 +2236,7 @@ function openHelp() {
         <li><b>用提示按钮会扣 5 探案分</b>——慎用</li>
       </ul>
       <p style="color: var(--text-muted); font-style: italic; font-size: 13px; margin-top: 18px;">
-        Brennan：「数据胜过直觉。你的工具就在这里。开始吧。」
+        布伦南：「数据胜过直觉。你的工具就在这里。开始吧。」
       </p>
     </div>
   `;
