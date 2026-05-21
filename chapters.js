@@ -12,9 +12,9 @@
     if (name === "ch11") return ritualCh11();
   }
 
-  // ---------- Ch 6 · Eleanor Wi-Fi gap reveal ----------
+  // ---------- Ch 6 · 埃莉诺 Wi-Fi gap reveal ----------
   async function ritualCh6() {
-    // Pulse Eleanor's clue (if present) + popover with mini timeline
+    // Pulse 埃莉诺's clue (if present) + popover with mini timeline
     const eleanorClue = Object.values(window.BMM2.clueIndex || {}).find(c => c.pid === 7);
     if (eleanorClue) {
       const el = document.querySelector(`.clue[data-key="${cssAttr(eleanorClue.key)}"]`);
@@ -22,7 +22,7 @@
         el.classList.remove("pulse"); void el.offsetWidth; el.classList.add("pulse");
       }
     }
-    showFlashBanner(`Eleanor Wright · Wi-Fi 67 分钟空窗`, "00:28 → 01:35 · 整个 ToD 窗口手机不在任何 AP 上。");
+    showFlashBanner(`埃莉诺·赖特 · Wi-Fi 67 分钟空窗`, "00:28 → 01:35 · 整个 ToD 窗口手机不在任何 AP 上。");
     await sleep(3200);
   }
 
@@ -58,17 +58,17 @@
       m.innerHTML = `
         <header><h2 style="font-family: var(--font-serif); font-size: 18px; letter-spacing: 0.16em; color: var(--accent-blood-2);">封存档案 · UNSEALED</h2><span class="close">×</span></header>
         <div class="reveal-body">
-          <img class="reveal-portrait" src="portraits/Margaret.png" alt="Margaret Blackwood" loading="lazy" decoding="async"/>
-          <h2>Margaret Blackwood</h2>
+          <img class="reveal-portrait" src="portraits/Margaret.png" alt="玛格丽特·布莱克伍德" loading="lazy" decoding="async"/>
+          <h2>玛格丽特·布莱克伍德</h2>
           <div class="reveal-yrs">1964 — 1986 · 自杀 · 22 岁</div>
           <div class="reveal-banner">封存的领养记录浮出水面。</div>
           <div class="reveal-text">
-            一九八〇年，Margaret 十六岁。<br/>
-            孩子由 Robert 与 Patricia Wright 法定领养，记录封存。<br/>
+            一九八〇年，玛格丽特 十六岁。<br/>
+            孩子由 罗伯特 与 帕特里夏·赖特 法定领养，记录封存。<br/>
             六年后她从黑木庄园的井里走了。<br/><br/>
-            <b>Eleanor Wright 是 Margaret Blackwood 的女儿。</b><br/>
-            Elias 是 Margaret 的兄弟。<br/>
-            Eleanor 当了他三年的传记作者。
+            <b>埃莉诺·赖特 是 玛格丽特·布莱克伍德 的女儿。</b><br/>
+            伊莱亚斯 是 玛格丽特 的兄弟。<br/>
+            埃莉诺 当了他三年的传记作者。
           </div>
         </div>
         <div class="modal-foot"><button class="modal-continue">我明白了，继续 →</button></div>
@@ -97,7 +97,7 @@
       m.className = "modal doc-modal";
       const memo = window.BMM2_workspace.runRows(`SELECT EventTime, Action, FileName, CharCount, PreviewText FROM WritingSoftwareLog WHERE FileName='Memo_PersonalNote.scriv' ORDER BY EventTime`);
       const full = memo.find(r => r[4] && !String(r[4]).startsWith("["))?.[4] ||
-        "Eleanor coming in 10 min. She knows. We will settle this. Three years of her work, my biography — she has been looking for something. After tonight she will be told. She has a right to ask. She does not have a right to ruin me. — E.B.";
+        "埃莉诺十分钟后到。她知道了。我们会把这件事了结。三年来她做我的传记——她一直在找什么东西。今夜过后她会被告知。她有权利发问。但她没有权利毁掉我。——E.B.";
       m.innerHTML = `
         <header>
           <div style="flex:1;">
@@ -226,14 +226,14 @@
     m.innerHTML = `
       <div class="report-hero">
         <div>
-          <h1>案件 BMM-2024-1019 · CLOSED</h1>
-          <div class="sub">MURDER OF ELIAS BLACKWOOD · ASHFORD MANOR · 30 OCTOBER 2024</div>
+          <h1>案件 BMM-2024-1019 · 已结案</h1>
+          <div class="sub">伊莱亚斯·布莱克伍德 谋杀案 · 阿什福德庄园 · 2024 年 10 月 30 日</div>
         </div>
       </div>
       <div class="report-body">
 
         <div class="section">
-          <h3>结案陈述 · Detective Inspector James Brennan</h3>
+          <h3>结案陈述 · 督察 詹姆斯·布伦南</h3>
           <div class="narration" id="case-narration"></div>
         </div>
 
@@ -265,11 +265,11 @@
         <div class="section">
           <h3>献辞</h3>
           <div class="dedication">
-            <img src="portraits/Margaret.png" alt="Margaret Blackwood" loading="lazy" decoding="async"/>
+            <img src="portraits/Margaret.png" alt="玛格丽特·布莱克伍德" loading="lazy" decoding="async"/>
             <div class="dtext">
-              Margaret Blackwood · 1964 — 1986<br/>
-              Her work was published posthumously<br/>
-              in December 2024, under her own name.
+              玛格丽特·布莱克伍德 · 1964 — 1986<br/>
+              她的作品于 2024 年 12 月<br/>
+              以她本人的名字，身后出版。
             </div>
           </div>
         </div>
@@ -287,11 +287,11 @@
     const narrationEl = document.getElementById("case-narration");
     if (narrationEl && window.BMM2_brennan && window.BMM2_brennan.type) {
       const text =
-`"Eleanor Wright，44 岁，已认罪。
+`"埃莉诺·赖特，44 岁，已认罪。
 
 起诉为二级谋杀。
 
-她在档案室里花了三年时间，找到她生母 Margaret 的所有作品。最后一次对峙——她意识到 Elias 第二天会公开承认——但她没等到那一天。
+她在档案室里花了三年时间，找到她生母 玛格丽特 的所有作品。最后一次对峙——她意识到 伊莱亚斯 第二天会公开承认——但她没等到那一天。
 
 死者本可以救她于这场悲剧。死者不知道。
 

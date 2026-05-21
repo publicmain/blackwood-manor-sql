@@ -55,13 +55,13 @@ function taskDone(id) { return BMM2.state.completedTasks.includes(id); }
 // ============================================================
 async function boot() {
   // sql.js wasm
-  setLoadingMsg("正在连接到 Ashford Manor 临时指挥室...");
+  setLoadingMsg("正在连接到阿什福德庄园临时指挥室...");
   const SQL = await initSqlJs({
     locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${f}`
   });
   BMM2.db = new SQL.Database();
   BMM2.db.exec(window.BMM_SQL);
-  setLoadingMsg("DATABASE LIVE");
+  setLoadingMsg("数据库已就绪");
 
   // Decide opening vs resume
   if (BMM2.state.openingDone) {
@@ -300,8 +300,8 @@ function workspaceShell() {
         <div class="brennan-head">
           ${brennanPhotoEl()}
           <div>
-            <div class="brennan-name">DI James Brennan</div>
-            <div class="brennan-rank">GLOUCESTERSHIRE CID</div>
+            <div class="brennan-name">詹姆斯·布伦南 督察</div>
+            <div class="brennan-rank">格洛斯特郡 刑事调查科</div>
             <div class="brennan-mood" id="brennan-mood"></div>
           </div>
         </div>
@@ -311,7 +311,7 @@ function workspaceShell() {
         <div class="speech-bubble" id="brennan-bubble">
           <div class="bubble-head">
             <span class="bubble-time" id="bubble-time"></span>
-            <span class="bubble-name">JB</span>
+            <span class="bubble-name">布伦南</span>
           </div>
           <div class="speech" id="brennan-speech"></div>
         </div>
@@ -363,8 +363,8 @@ function workspaceShell() {
 
     <div class="modal-veil" id="modal-veil"><div class="modal" id="modal-content"></div></div>
     <div class="stamp-veil" id="stamp-veil">
-      <div class="stamp">CASE CLOSED</div>
-      <div class="stamp-sub">2024 · OCTOBER · 30</div>
+      <div class="stamp">案件了结</div>
+      <div class="stamp-sub">2024 · 10 · 30</div>
     </div>
   `;
 }
@@ -374,7 +374,7 @@ function brennanPhotoEl() {
   // silhouette so the right-rail looks like a redacted dossier portrait
   // rather than two flat letters.
   return `<div class="brennan-photo svg-portrait">
-    <svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg" aria-label="DI James Brennan (portrait redacted)">
+    <svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg" aria-label="詹姆斯·布伦南督察（肖像已隐去）">
       <defs>
         <linearGradient id="bg-grad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="#1A2230"/>
@@ -391,7 +391,7 @@ function brennanPhotoEl() {
       <!-- hairline hint -->
       <path d="M 30 36 Q 50 22 70 36" stroke="#3D4A60" stroke-width="1" fill="none" opacity="0.7"/>
       <!-- "redacted" badge -->
-      <text x="50" y="105" text-anchor="middle" font-family="Georgia,serif" font-size="6" fill="#B89968" letter-spacing="0.2em">DI JB</text>
+      <text x="50" y="105" text-anchor="middle" font-family="Georgia,serif" font-size="6" fill="#B89968" letter-spacing="0.2em">布伦南</text>
     </svg>
   </div>`;
 }
@@ -473,13 +473,13 @@ const CASEFILE_CAST = {
   family: [
     { pid: 14, en: "Margaret Blackwood", zh: "玛格丽特·布莱克伍德", role: "Elias 的妹妹（已故）",
       rel: "妹妹", hook: "有抱负的作家，1986 年 22 岁自杀。" },
-    { pid: 15, en: "Charles Blackwood", zh: "查尔斯·布莱克伍德", role: "父亲（已故）",
+    { pid: 15, en: "查尔斯·布莱克伍德", zh: "查尔斯·布莱克伍德", role: "父亲（已故）",
       rel: "父亲", hook: "Elias 与 Margaret 的父亲。" },
-    { pid: 16, en: "Henrietta Blackwood", zh: "亨丽埃塔·布莱克伍德", role: "母亲（已故）",
+    { pid: 16, en: "亨丽埃塔·布莱克伍德", zh: "亨丽埃塔·布莱克伍德", role: "母亲（已故）",
       rel: "母亲", hook: "Elias 与 Margaret 的母亲。" },
-    { pid: 17, en: "Robert Wright", zh: "罗伯特·赖特", role: "Eleanor 的养父（已故）",
+    { pid: 17, en: "罗伯特·赖特", zh: "罗伯特·赖特", role: "Eleanor 的养父（已故）",
       rel: "Eleanor 养父", hook: "Eleanor 的法定父亲。" },
-    { pid: 18, en: "Patricia Wright", zh: "帕特里夏·赖特", role: "Eleanor 的养母（已故）",
+    { pid: 18, en: "帕特里夏·赖特", zh: "帕特里夏·赖特", role: "Eleanor 的养母（已故）",
       rel: "Eleanor 养母", hook: "Eleanor 的法定母亲。" }
   ],
   staff: [
@@ -661,7 +661,6 @@ function castCardHTML(p, opts) {
       <div class="cc-body">
         <div class="cc-names">
           <span class="cc-zh">${esc(p.zh)}</span>
-          <span class="cc-en">${esc(p.en)}</span>
           ${markLabel ? `<span class="cc-mark mark-${mark}">${markLabel}</span>` : ""}
         </div>
         <div class="cc-role">${esc(p.role)}</div>
@@ -932,13 +931,13 @@ function addClues(cols, rows) {
 //      time-stamped clue (keycard, wifi, sms, ...). Updates live.
 // ============================================================
 const SUSPECT_LIST = [
-  { pid: 2, name: "Vivienne Ashford",  role: "前妻 · 庄园终身使用权" },
-  { pid: 3, name: "Sophia Blackwood",  role: "现妻 · Anchor 主播" },
-  { pid: 4, name: "Marcus Thorne",     role: "文学经纪人 · 22 年合同" },
-  { pid: 5, name: "Iris Chen",         role: "2023 Booker 得主" },
-  { pid: 6, name: "Julian Hartley",    role: "作家 · 旧友" },
-  { pid: 7, name: "Eleanor Wright",    role: "授权传记作者" },
-  { pid: 8, name: "Henrik Volkov",     role: "俄籍出版人" }
+  { pid: 2, name: "薇薇安·阿什福德",   role: "前妻 · 庄园主人" },
+  { pid: 3, name: "索菲娅·布莱克伍德", role: "现任妻子 · 前编辑" },
+  { pid: 4, name: "马库斯·索恩",       role: "文学经纪人 · 合作 22 年" },
+  { pid: 5, name: "艾莉丝·陈",         role: "2023 黑木奖得主" },
+  { pid: 6, name: "朱利安·哈特利",     role: "作家 · 宿敌" },
+  { pid: 7, name: "埃莉诺·赖特",       role: "授权传记作者" },
+  { pid: 8, name: "亨里克·沃尔科夫",   role: "文学评论家" }
 ];
 const MARK_LABEL = {
   unknown: "待查", suspect: "怀疑", cleared: "已排除", prime: "重点嫌疑"
@@ -1268,7 +1267,7 @@ function archiveCurrentBubble() {
   card.innerHTML = `
     <div class="log-card-head">
       <span class="log-card-time">${time ? time.textContent : ""}</span>
-      <span class="log-card-name">DI Brennan</span>
+      <span class="log-card-name">布伦南 督察</span>
     </div>
     <div class="log-card-body"></div>
   `;
@@ -1932,7 +1931,6 @@ function initPersonHoverCard() {
       <div class="phc-photo">${photoEl}</div>
       <div class="phc-body">
         <div class="phc-zh">${esc(p.zh)}</div>
-        <div class="phc-en">${esc(p.en)}</div>
         <div class="phc-role">${esc(p.role || "")}</div>
         <div class="phc-hook">${esc(p.hook || "")}</div>
       </div>`;
