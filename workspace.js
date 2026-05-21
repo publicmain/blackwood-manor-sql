@@ -1547,6 +1547,21 @@ function showTutorialPopover(onContinue) {
   const veil = document.getElementById("modal-veil");
   const m = document.getElementById("modal-content");
   if (!veil || !m) { if (onContinue) onContinue(); return; }
+  // The onboarding Promise MUST resolve no matter how the popover closes.
+  // The shared #modal-veil carries a stale "click-background-to-close"
+  // handler left by earlier modals (openCaseFile / openSuspectModal): a
+  // background click closes this popover via closeModal() WITHOUT firing the
+  // 继续 button — without this failsafe the game soft-locks at Ch0→Ch1
+  // because completeCurrentTask hangs forever at `await showTutorialPopoverAsync()`.
+  let done = false;
+  let obs = null;
+  function finish() {
+    if (done) return;
+    done = true;
+    if (obs) obs.disconnect();
+    closeModal();
+    if (onContinue) onContinue();
+  }
   m.className = "modal";
   m.style.maxWidth = "520px";
   m.innerHTML = `
@@ -1569,10 +1584,12 @@ function showTutorialPopover(onContinue) {
     </div>
   `;
   veil.classList.add("open");
-  document.getElementById("btn-tutorial-continue").addEventListener("click", () => {
-    closeModal();
-    if (onContinue) onContinue();
+  document.getElementById("btn-tutorial-continue").addEventListener("click", finish);
+  // Failsafe: if the veil is dismissed by ANY other path, still resolve.
+  obs = new MutationObserver(() => {
+    if (!veil.classList.contains("open")) finish();
   });
+  obs.observe(veil, { attributes: true, attributeFilter: ["class"] });
 }
 
 function showToast(msg, cls) {
