@@ -858,25 +858,32 @@ window.BMM2_grade = function (task, result, rawQuery) {
                `——再检查 WHERE / JOIN 条件，别用 SELECT * 一次拉全表`
         };
       }
-      // (2) Value overlap — confirms the player fetched the RIGHT ROWS,
-      //     while tolerating column choice. We compare distinct value
-      //     sets: the player's result must cover at least half of the
-      //     canonical answer's distinct values. This lets a correct query
-      //     that selects fewer / extra columns, a different ORDER BY, or
-      //     different aliases still pass — but a query that returns the
-      //     wrong rows (low overlap) is still rejected.
+      // (2) Value direction — confirm the player fetched the RIGHT ROWS,
+      //     tolerating column choice. Earlier this required the PLAYER's
+      //     result to cover ≥50% of the CANONICAL's distinct values, which
+      //     forced students to SELECT enough columns or judged them wrong;
+      //     a student who correctly wrote `SELECT PersonID FROM ... WHERE …`
+      //     and returned the right 2 rows (just one column) was rejected
+      //     because their single value couldn't cover the canonical's
+      //     5 distinct values.
+      //
+      //     The right test is the reverse: most of what the PLAYER returned
+      //     should appear in the canonical's value set — proving their rows
+      //     are real canonical rows (just possibly fewer columns). This
+      //     still rejects "wrong rows" (player's values don't match canon)
+      //     and `SELECT * FROM <wholeTable>` was already caught by (1).
       const playerVals = new Set();
       for (const r of rows) for (const c of r) playerVals.add(String(c));
       const canonVals = new Set();
       for (const r of canonRows) for (const c of r) canonVals.add(String(c));
-      let hit = 0;
-      for (const v of canonVals) if (playerVals.has(v)) hit++;
-      const ratio = canonVals.size ? hit / canonVals.size : 1;
+      let fromCanon = 0;
+      for (const v of playerVals) if (canonVals.has(v)) fromCanon++;
+      const ratio = playerVals.size ? fromCanon / playerVals.size : 0;
       if (ratio < 0.5) {
         return {
           pass: false,
-          why: "行数对了，但查到的好像不是正确的那些行——" +
-               "再检查一下 WHERE / JOIN 条件"
+          why: "行数对了，但你返回的值大多不在标准答案里——" +
+               "WHERE / JOIN 条件可能写错了，查到的不是正确的那些行"
         };
       }
       return { pass: true, why: "查询命中——结果正确" };

@@ -1671,8 +1671,8 @@ function showResultFail(why) {
     hint = "行数对不上。WHERE 条件可能太严（行太少）或太宽（行太多），再核一下范围。";
   } else if (/首行首列/.test(why || "")) {
     hint = "首行首列对不上——可能是没有 ORDER BY，或排序方向反了。";
-  } else if (/查到的好像不是正确的那些行/.test(why || "")) {
-    hint = "行数对了但内容不对——WHERE 的条件可能写错了，对照一下题面再想想。";
+  } else if (/查到的(?:好像)?不是正确的那些行|返回的值大多不在标准答案里/.test(why || "")) {
+    hint = "行数对了但行内容不对——WHERE / JOIN 条件可能写错了，对照题面里的过滤条件再核一遍。";
   } else if (/缺列/.test(why || "")) {
     hint = "SELECT 里少了一列。题面要求的每一列都不能缺。";
   }
