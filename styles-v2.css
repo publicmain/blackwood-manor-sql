@@ -562,6 +562,24 @@ input, textarea { user-select: text; }
   margin-right: 8px;
 }
 
+/* "还没过 + 原因 + 提示" persistent banner on the result panel */
+.result-fail {
+  font-family: var(--font-serif); font-size: 13px;
+  line-height: 1.6; color: var(--text-primary);
+  padding: 9px 16px;
+  background: rgba(176, 71, 58, 0.16);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.result-fail .rf-tag {
+  font-family: var(--font-mono); font-size: 10px;
+  color: #d97676; letter-spacing: 0.08em;
+  margin-right: 8px;
+}
+.result-fail .rf-hint {
+  font-family: var(--font-serif); font-size: 12px;
+  color: var(--text-secondary); margin-top: 5px; line-height: 1.55;
+}
+
 /* Story-first skip — always available so the SQL never blocks the story. */
 #task-skip-story {
   display: block; width: 100%;

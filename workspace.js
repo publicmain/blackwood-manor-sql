@@ -332,6 +332,7 @@ function workspaceShell() {
         <button id="btn-result-close" title="关闭">×</button>
       </div>
       <div class="result-gain" id="result-gain" style="display:none;"></div>
+      <div class="result-fail" id="result-fail" style="display:none;"></div>
       <div class="result-body" id="result-body"></div>
     </div>
 
@@ -1528,7 +1529,10 @@ function runQuery() {
     // covered it, then it re-appeared after the scene closed.
     completeCurrentTask(t, sql);
   } else {
-    showToast(`✓ ${added} 条线索归档 · 但 ${verdict.why}`, "warn");
+    // Persistent fail banner on the result panel so the student doesn't
+    // miss the (3.5s) toast and sit there wondering why nothing advanced.
+    showResultFail(verdict.why);
+    showToast(`✗ 还没过 · ${verdict.why}`, "warn");
   }
 }
 
@@ -1609,10 +1613,11 @@ function showResultPanel(columns, values) {
   const body  = document.getElementById("result-body");
   const meta  = document.getElementById("result-meta");
   if (!panel || !body) return;
-  // A fresh query — clear any previous "你查到了" gain note; it's only
-  // re-shown if this query actually completes the task.
+  // A fresh query — clear any previous "你查到了" gain note AND any leftover
+  // fail banner; both are only re-shown if THIS query's grading says so.
   const gainEl = document.getElementById("result-gain");
   if (gainEl) { gainEl.style.display = "none"; gainEl.textContent = ""; }
+  hideResultFail();
   meta.textContent = `${values.length} 行 · ${columns.length} 列`;
   // Build the table
   let html = '<table class="result-table"><thead><tr>';
@@ -1643,11 +1648,42 @@ function hideResultPanel() {
 // when a task is completed (solved or skipped) so a weak-comprehension
 // player gets told, in one sentence, what this step achieved.
 function showResultGain(taskId) {
+  hideResultFail();   // task passed — clear any leftover fail banner
   const gainEl = document.getElementById("result-gain");
   const brief = window.BMM2_BRIEF && window.BMM2_BRIEF[taskId];
   if (!gainEl || !brief || !brief.gain) return;
   gainEl.innerHTML = `<span class="rg-tag">📌 你查到了</span>${esc(brief.gain)}`;
   gainEl.style.display = "block";
+}
+
+// Persistent "still wrong, here's why" banner on the result panel. The
+// 3.5s toast is too easy to miss — a weak-comprehension player sits there
+// staring at their own result wondering why nothing advanced. This panel
+// stays put until the next query, and translates the grader's terse
+// reason into something actionable.
+function showResultFail(why) {
+  const el = document.getElementById("result-fail");
+  if (!el) return;
+  let hint = "";
+  if (/结果中应有包含/.test(why || "")) {
+    hint = "通常是 SELECT 的列少选了——想想这个值属于哪一列，把那一列也 SELECT 出来。";
+  } else if (/期望.*?行|至少需要.*?行|应为.*?行/.test(why || "")) {
+    hint = "行数对不上。WHERE 条件可能太严（行太少）或太宽（行太多），再核一下范围。";
+  } else if (/首行首列/.test(why || "")) {
+    hint = "首行首列对不上——可能是没有 ORDER BY，或排序方向反了。";
+  } else if (/查到的好像不是正确的那些行/.test(why || "")) {
+    hint = "行数对了但内容不对——WHERE 的条件可能写错了，对照一下题面再想想。";
+  } else if (/缺列/.test(why || "")) {
+    hint = "SELECT 里少了一列。题面要求的每一列都不能缺。";
+  }
+  el.innerHTML =
+    `<span class="rf-tag">✗ 还没过</span>${esc(why || "")}` +
+    (hint ? `<div class="rf-hint">${esc(hint)}</div>` : "");
+  el.style.display = "block";
+}
+function hideResultFail() {
+  const el = document.getElementById("result-fail");
+  if (el) el.style.display = "none";
 }
 
 // Helper: have 布伦南 say a short reaction line.
