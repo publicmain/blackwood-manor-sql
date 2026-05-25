@@ -29,7 +29,9 @@ function load() {
     notes: "",
     score: 0,
     stats: { startTime: Date.now(), queriesRun: 0, errors: 0, hintsUsed: 0 },
-    settings: { audio: false, reducedMotion: false },
+    // Animation reduction is honored via the OS-level `prefers-reduced-motion`
+    // media query (see styles-v2.css). No in-app toggle.
+    settings: { audio: false },
     openingDone: false
   };
 }
@@ -196,6 +198,7 @@ function mountWorkspace() {
   bindTerminal();
   bindRightRail();
   initPersonHoverCard();   // hover cards over names in 布伦南's dialogue
+  initVeilCloseHandler();  // single shared modal-veil background-close handler
 
   // First run: pick a difficulty, THEN meet the cast. On later runs both
   // are skipped (flags persisted in state).
@@ -229,10 +232,10 @@ function workspaceShell() {
       </div>
       <div class="score">探案分 <span class="num" id="score-num">0</span></div>
       <div class="tools">
-        <button id="btn-casefile" title="案件资料：人物 / 数据表 / 庄园地图 / 案情进展">📂 案件资料</button>
-        <button id="btn-drawer" title="档案柜">📁 档案柜</button>
-        <button id="btn-help" title="案件简介与操作帮助">ⓘ</button>
-        <button id="btn-settings" title="设置">⚙</button>
+        <button id="btn-casefile" title="案件资料：人物 / 数据表 / 庄园地图 / 案情进展" aria-label="案件资料">📂 案件资料</button>
+        <button id="btn-drawer" title="档案柜" aria-label="档案柜">📁 档案柜</button>
+        <button id="btn-help" title="案件简介与操作帮助" aria-label="案件简介与操作帮助">ⓘ</button>
+        <button id="btn-settings" title="设置" aria-label="设置">⚙</button>
       </div>
     </div>
 
@@ -288,7 +291,7 @@ function workspaceShell() {
         <div class="task-brief" id="task-brief"></div>
         <p class="task-detail" id="task-body">—</p>
         <div class="hint-row">
-          <button id="task-hint">💡 提示</button>
+          <button id="task-hint" title="点击查看提示（同一关首次扣 5 分，再次免费）">💡 提示 (-5)</button>
           <button id="task-skip-anim" title="跳过台词打字动画">⏩ 台词</button>
         </div>
         <button id="task-skip-story" title="不想写 SQL？直接看数据、继续故事">⏭ 跳过此题 · 继续故事 →</button>
@@ -375,7 +378,7 @@ function brennanPhotoEl() {
   // silhouette so the right-rail looks like a redacted dossier portrait
   // rather than two flat letters.
   return `<div class="brennan-photo svg-portrait">
-    <svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg" aria-label="詹姆斯·布伦南督察（肖像已隐去）">
+    <svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="詹姆斯·布伦南督察（肖像已隐去）">
       <defs>
         <linearGradient id="bg-grad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="#1A2230"/>
@@ -618,7 +621,10 @@ function openCaseFile(tab) {
   `;
   veil.classList.add("open");
   m.querySelector(".close").addEventListener("click", closeModal);
-  veil.addEventListener("click", e => { if (e.target === veil) closeModal(); });
+  // veil-background-click is handled once by the central handler installed
+  // in mountWorkspace — see initVeilCloseHandler. Per-opener handlers used
+  // to accumulate (each open added one and never removed), causing subtle
+  // double-close bugs (and the Ch0→Ch1 tutorial soft-lock).
   m.querySelectorAll(".cf-tab").forEach(b => {
     b.addEventListener("click", () => {
       m.querySelectorAll(".cf-tab").forEach(x => x.classList.remove("active"));
@@ -914,7 +920,14 @@ function addClues(cols, rows) {
     clue.key = key;
     BMM2.clueIndex[key] = clue;
     // Persist minimal data for restore
-    BMM2.state.clues[key] = { type, title: clue.title, sub: clue.sub, pid: clue.pid, fname: clue.fname };
+    // Persist EVERYTHING the detail modal needs (cols + row) so a player who
+    // reloads the page can still click a previously-discovered clue. Without
+    // cols+row, clueDetailTable / openCommModal threw on every restored click.
+    BMM2.state.clues[key] = {
+      type, title: clue.title, sub: clue.sub,
+      pid: clue.pid, fname: clue.fname,
+      cols: clue.cols, row: clue.row
+    };
     added++;
   });
   save();
@@ -1098,7 +1111,8 @@ function restoreClues() {
     }
     BMM2.clueIndex[key] = {
       key, type: data.type, title: data.title, sub: data.sub,
-      pid, fname: data.fname
+      pid, fname: data.fname,
+      cols: data.cols, row: data.row
     };
     // Persist the backfilled pid so future renders are stable
     if (pid && !data.pid) {
@@ -1154,8 +1168,14 @@ function refreshTaskCard() {
     card.addEventListener("click", () => refreshTaskCard(), { once: true });
   };
   document.getElementById("task-hint").onclick = () => {
-    BMM2.state.stats.hintsUsed++;
-    addScore(-5);
+    // Charge -5 only on FIRST hint per task; re-opening the same hint is
+    // free, so a student who closes the popover by accident isn't punished.
+    BMM2.state.hintsTaken = BMM2.state.hintsTaken || {};
+    if (!BMM2.state.hintsTaken[t.id]) {
+      BMM2.state.hintsTaken[t.id] = true;
+      BMM2.state.stats.hintsUsed++;
+      addScore(-5);
+    }
     save();
     showHint(t.hint);
   };
@@ -1205,9 +1225,14 @@ async function speakCurrentIntro() {
     const sceneId = window.BMM2_SCENE_BEFORE[t.id];
     BMM2.state.scenesPlayed = BMM2.state.scenesPlayed || [];
     if (!BMM2.state.scenesPlayed.includes(sceneId)) {
-      BMM2.state.scenesPlayed.push(sceneId);
-      save();
+      // Mark AFTER the scene closes — if the player reloads mid-cutscene
+      // we'd otherwise mark a half-shown scene as "played" and never let
+      // them read the rest.
       await window.BMM2_playScene(sceneId);
+      if (!BMM2.state.scenesPlayed.includes(sceneId)) {
+        BMM2.state.scenesPlayed.push(sceneId);
+        save();
+      }
     }
   }
   // Re-assert after the cutscene closes (the scene veil can leave the
@@ -1503,7 +1528,7 @@ function runQuery() {
   let last = results[results.length - 1];
   if (!last) {
     showResultBanner("SQL 执行了，但没返回结果集（多半是写成了 CREATE / UPDATE 等）。", "warn",
-                     "这关需要 SELECT。把语句改成 SELECT ... FROM ... 再试。");
+                     withFilterHint("这关需要 SELECT。把语句改成 SELECT ... FROM ... 再试。"));
     showToast("✓ 语句执行成功，无结果集。", "warn");
     brennanReact("空集。表里没那种行。换个角度。");
     return;
@@ -1513,7 +1538,7 @@ function runQuery() {
     // can see "I asked for these columns, got 0 rows" — and the banner
     // tells them *why* it might be 0.
     showResultPanel(last.columns, []);
-    showResultBanner("查询返回 0 行。", "empty", hintForEmptyResult(sql));
+    showResultBanner("查询返回 0 行。", "empty", withFilterHint(hintForEmptyResult(sql)));
     showToast("⚠ 查询无结果。再想想？", "warn");
     brennanReact("查到 0 行。WHERE 条件可能太严了。");
     return;
@@ -1550,7 +1575,7 @@ function runQuery() {
   } else {
     // Persistent fail banner on the result panel so the student doesn't
     // miss the (3.5s) toast and sit there wondering why nothing advanced.
-    showResultBanner(verdict.why, "fail", hintForGraderFail(verdict.why));
+    showResultBanner(verdict.why, "fail", withFilterHint(hintForGraderFail(verdict.why)));
     showToast(`✗ 还没过 · ${verdict.why}`, "warn");
   }
 }
@@ -1735,6 +1760,15 @@ function hintForSqlError(errMsg, sql) {
   if (/no such function/.test(m)) return "函数名写错了，或者这个数据库不支持。常用：COUNT、MAX、MIN、SUM、AVG、LIKE。";
   return "";
 }
+// Surface the anti-spoiler filter's side-channel hint, so a student who
+// runs `SELECT * FROM PhysicalEvidence` pre-Ch10 sees "鉴证科还在分析"
+// instead of staring at 0 rows. BMM2_filterQuery sets window.__bmFilterHint
+// after each call.
+function withFilterHint(hint) {
+  const fh = window.__bmFilterHint || "";
+  if (!fh) return hint || "";
+  return fh + (hint ? " · " + hint : "");
+}
 function hintForEmptyResult(sql) {
   const s = String(sql);
   // BETWEEN with HH:MM only (no date) — classic Ch2 trap
@@ -1825,8 +1859,8 @@ async function completeCurrentTask(t, sql, opts) {
       const markerKey = "seqAfter:" + t.id;
       BMM2.state.scenesPlayed = BMM2.state.scenesPlayed || [];
       if (!BMM2.state.scenesPlayed.includes(markerKey)) {
-        BMM2.state.scenesPlayed.push(markerKey);
-        save();
+        // Mark AFTER, not before — survives a mid-cutscene reload so the
+        // player can still read the rest of the chapter-close narration.
         if (window.BMM2_playSceneSequence) {
           await window.BMM2_playSceneSequence(sceneIds);
         } else {
@@ -1837,6 +1871,11 @@ async function completeCurrentTask(t, sql, opts) {
         // Ch11: also play epilogue (G - book + courtroom) before report
         if (sceneIds.includes("finale_confession")) {
           await window.BMM2_playScene("finale_epilogue");
+        }
+        // Mark played only after the sequence finished — see comment above.
+        if (!BMM2.state.scenesPlayed.includes(markerKey)) {
+          BMM2.state.scenesPlayed.push(markerKey);
+          save();
         }
       }
     }
@@ -1887,6 +1926,12 @@ function waitForContinue(label) {
     const skipBtn = document.getElementById("task-skip-story");
     if (runBtn) runBtn.disabled = true;
     if (skipBtn) skipBtn.disabled = true;   // a gate is up — skip is moot
+    // Also lock the topbar tools so the player can't layer a modal on top of
+    // the gate (the shared modal-veil + accumulated background-close handlers
+    // can leave the gate orphaned). Reopen when the gate finishes.
+    const topbarBtns = ["btn-casefile","btn-drawer","btn-help","btn-settings"]
+      .map(id => document.getElementById(id)).filter(Boolean);
+    topbarBtns.forEach(b => { b.disabled = true; b.style.opacity = "0.45"; b.style.pointerEvents = "none"; });
     BMM2.awaitingContinue = true;
 
     const bar = document.createElement("div");
@@ -1915,6 +1960,7 @@ function waitForContinue(label) {
       BMM2.awaitingContinue = false;
       if (runBtn) runBtn.disabled = false;
       if (skipBtn) skipBtn.disabled = false;
+      topbarBtns.forEach(b => { b.disabled = false; b.style.opacity = ""; b.style.pointerEvents = ""; });
       bar.remove();
       resolve();
     }
@@ -1965,7 +2011,10 @@ function openDialogueHistory() {
   `;
   veil.classList.add("open");
   m.querySelector(".close").addEventListener("click", closeModal);
-  veil.addEventListener("click", e => { if (e.target === veil) closeModal(); });
+  // veil-background-click is handled once by the central handler installed
+  // in mountWorkspace — see initVeilCloseHandler. Per-opener handlers used
+  // to accumulate (each open added one and never removed), causing subtle
+  // double-close bugs (and the Ch0→Ch1 tutorial soft-lock).
 }
 
 // ============================================================
@@ -1988,7 +2037,10 @@ function openClueDetail(key) {
   `;
   veil.classList.add("open");
   m.querySelector(".close").addEventListener("click", closeModal);
-  veil.addEventListener("click", e => { if (e.target === veil) closeModal(); });
+  // veil-background-click is handled once by the central handler installed
+  // in mountWorkspace — see initVeilCloseHandler. Per-opener handlers used
+  // to accumulate (each open added one and never removed), causing subtle
+  // double-close bugs (and the Ch0→Ch1 tutorial soft-lock).
 }
 function clueDetailTable(clue) {
   return `<table style="width:100%; font-family:var(--font-mono); font-size:12px;">
@@ -2039,15 +2091,24 @@ function initPersonHoverCard() {
     card.style.display = "flex";
     place(ref);
   }
-  function hide() { card.style.display = "none"; }
+  // Small hide-delay so the card doesn't flicker when the mouse momentarily
+  // crosses a sibling element between two names. If a show happens during
+  // the delay, cancel the hide.
+  let hideTimer = null;
+  function hide() {
+    if (hideTimer) return;
+    hideTimer = setTimeout(() => { card.style.display = "none"; hideTimer = null; }, 130);
+  }
+  function cancelHide() {
+    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+  }
+  function showWithCancel(ref) { cancelHide(); show(ref); }
 
   // One delegated handler: mouseover fires for every element the cursor
-  // enters. Over a name → show; over anything else → hide. This dismisses
-  // the card reliably the instant the mouse leaves a name (the old
-  // separate mouseout handler could leave the card stuck).
+  // enters. Over a name → show; over anything else → schedule a hide.
   document.addEventListener("mouseover", e => {
     const ref = e.target.closest && e.target.closest(".person-ref");
-    if (ref) show(ref);
+    if (ref) showWithCancel(ref);
     else hide();
   });
   document.addEventListener("click", e => {
@@ -2071,8 +2132,13 @@ function openSuspectModal(pid, fromCaseFile) {
   // Rich Chinese biography + a short header tagline.
   const cast = CASEFILE_BY_PID[pid];
   const bioText = PERSON_BIO[pid] || notes || "";
+  // Run the bio through brennan.decorate so names like 玛格丽特 / 埃莉诺 in
+  // someone else's bio become person-ref links (hover card + click → dossier),
+  // matching the pattern already used in Brennan's right-rail dialogue.
+  const dec = (s) => (window.BMM2_brennan && window.BMM2_brennan.decorate)
+    ? window.BMM2_brennan.decorate(s) : esc(s);
   const bioHTML = bioText.split(/\n+/).map(s => s.trim()).filter(Boolean)
-    .map(s => `<p>${esc(s)}</p>`).join("");
+    .map(s => `<p>${dec(s)}</p>`).join("");
   const tagline = (cast && cast.zh ? cast.zh + " · " : "") + (cast && cast.role ? cast.role : "");
   // When opened from the Case File, "×" should return there, not the desk.
   const back = fromCaseFile ? () => openCaseFile("cast") : closeModal;
@@ -2135,7 +2201,10 @@ function openSuspectModal(pid, fromCaseFile) {
   `;
   veil.classList.add("open");
   m.querySelector(".close").addEventListener("click", back);
-  veil.addEventListener("click", e => { if (e.target === veil) back(); });
+  // Background-click goes to back() (close, or return to case file if
+  // we opened from there). Hand off to the central handler via the
+  // BMM2.veilCloseAction slot so it's still single-listener.
+  BMM2.veilCloseAction = back;
   m.querySelector("#mark-select").addEventListener("change", e => {
     BMM2.state.marks = BMM2.state.marks || {};
     BMM2.state.marks["person_" + pid] = e.target.value;
@@ -2232,7 +2301,10 @@ function openInterrogationTranscript(pid) {
   `;
   veil.classList.add("open");
   m.querySelector(".close").addEventListener("click", closeModal);
-  veil.addEventListener("click", e => { if (e.target === veil) closeModal(); });
+  // veil-background-click is handled once by the central handler installed
+  // in mountWorkspace — see initVeilCloseHandler. Per-opener handlers used
+  // to accumulate (each open added one and never removed), causing subtle
+  // double-close bugs (and the Ch0→Ch1 tutorial soft-lock).
   m.querySelectorAll(".tab-btn").forEach(b => {
     b.addEventListener("click", () => {
       m.querySelectorAll(".tab-btn").forEach(x => x.classList.remove("active"));
@@ -2244,7 +2316,10 @@ function openInterrogationTranscript(pid) {
 }
 
 function openDocModal(fname) {
-  const row = runRows(`SELECT EventTime, Action, FileName, CharCount, PreviewText FROM WritingSoftwareLog WHERE FileName='${String(fname).replace(/'/g, "''")}' ORDER BY EventTime`);
+  const row = runRowsP(
+    `SELECT EventTime, Action, FileName, CharCount, PreviewText FROM WritingSoftwareLog WHERE FileName = ? ORDER BY EventTime`,
+    [String(fname)]
+  );
   if (!row.length) return;
   const ch10 = chDone(10);
   const veil = document.getElementById("modal-veil");
@@ -2278,7 +2353,10 @@ function openDocModal(fname) {
   `;
   veil.classList.add("open");
   m.querySelector(".close").addEventListener("click", closeModal);
-  veil.addEventListener("click", e => { if (e.target === veil) closeModal(); });
+  // veil-background-click is handled once by the central handler installed
+  // in mountWorkspace — see initVeilCloseHandler. Per-opener handlers used
+  // to accumulate (each open added one and never removed), causing subtle
+  // double-close bugs (and the Ch0→Ch1 tutorial soft-lock).
 }
 
 function openCommModal(clue) {
@@ -2296,13 +2374,36 @@ function openCommModal(clue) {
   `;
   veil.classList.add("open");
   m.querySelector(".close").addEventListener("click", closeModal);
-  veil.addEventListener("click", e => { if (e.target === veil) closeModal(); });
+  // veil-background-click is handled once by the central handler installed
+  // in mountWorkspace — see initVeilCloseHandler. Per-opener handlers used
+  // to accumulate (each open added one and never removed), causing subtle
+  // double-close bugs (and the Ch0→Ch1 tutorial soft-lock).
 }
 
 function closeModal() {
   document.getElementById("modal-veil").classList.remove("open");
   const m = document.getElementById("modal-content");
   if (m) m.style.maxWidth = ""; // reset width overrides set by tutorial/help/etc.
+  // Reset the per-modal veil-background-close action so the NEXT modal
+  // gets the default (closeModal) unless it opts in to something else.
+  BMM2.veilCloseAction = null;
+}
+
+// Install ONE delegated background-click handler on #modal-veil. Each modal
+// opener used to attach its own `closeModal`-on-veil-click listener — those
+// accumulated across opens and caused subtle double-close bugs (and the
+// Ch0→Ch1 tutorial soft-lock). Now there's one handler; modals that need a
+// non-default close (e.g. openSuspectModal opened from the case file wants
+// "back to case file") set BMM2.veilCloseAction = fn.
+function initVeilCloseHandler() {
+  const veil = document.getElementById("modal-veil");
+  if (!veil || veil._closeHandlerInstalled) return;
+  veil._closeHandlerInstalled = true;
+  veil.addEventListener("click", e => {
+    if (e.target !== veil) return;
+    const action = (BMM2 && BMM2.veilCloseAction) || closeModal;
+    action();
+  });
 }
 
 // ============================================================
@@ -2329,13 +2430,13 @@ function openHelp() {
       <h3 style="font-family: var(--font-serif); font-size: 14px; color: var(--accent-gold); letter-spacing: 0.1em;">操作提示</h3>
       <ul style="padding-left: 22px;">
         <li>底部 SQL 终端：<code style="font-family: var(--font-mono); background: var(--bg-card); padding: 1px 6px;">⌘/Ctrl + ⏎</code> 或 <code style="font-family: var(--font-mono); background: var(--bg-card); padding: 1px 6px;">Shift + ⏎</code> 跑查询</li>
-        <li>查询结果会自动归档成左栏<b style="color: var(--accent-gold);">线索卡片</b></li>
-        <li>拖卡片到中央<b style="color: var(--accent-gold);">调查白板</b>（或点 ★ 钉住）</li>
-        <li>白板上：按住 <b>Alt</b> 从一张卡拖到另一张，可以画 <b style="color:var(--accent-blood);">红色关联线</b></li>
-        <li>单击人物卡 → <b style="color: var(--accent-gold);">完整档案</b>（可 Mark：待查/怀疑/已排除/重点嫌疑）</li>
-        <li>右上角 📁 档案柜：你已完成的所有步骤回顾</li>
-        <li>右栏底部：侦探笔记，自动保存</li>
-        <li><b>用提示按钮会扣 5 探案分</b>——慎用</li>
+        <li>查询结果会自动归档成左栏<b style="color: var(--accent-gold);">线索卡片</b>——点开可看原始记录</li>
+        <li>中央 <b style="color: var(--accent-gold);">案件概览</b>：嫌疑人卡片 + 案情进展，单击任一嫌疑人 → <b>完整档案</b>（可 Mark：待查 / 怀疑 / 已排除 / 重点嫌疑）</li>
+        <li>顶栏 <b style="color: var(--accent-gold);">📂 案件资料</b>：人物表 / 数据表字段 / 庄园平面图 / 案情进展回顾——随时可查</li>
+        <li>顶栏 <b style="color: var(--accent-gold);">📁 档案柜</b>：你已完成的所有步骤的台词回顾</li>
+        <li>右栏 <b style="color: var(--accent-gold);">布伦南对话</b>：人名是金色链接——悬停看人物速览、点击进入档案</li>
+        <li><b>「💡 提示 (-5)」按钮</b>：第一次点扣 5 探案分，同一关再次打开免费</li>
+        <li><b>「⏭ 跳过此题」按钮</b>：写不出 SQL 也能继续故事，不扣分、不影响后续</li>
       </ul>
       <p style="color: var(--text-muted); font-style: italic; font-size: 13px; margin-top: 18px;">
         布伦南：「数据胜过直觉。你的工具就在这里。开始吧。」
@@ -2344,7 +2445,10 @@ function openHelp() {
   `;
   veil.classList.add("open");
   m.querySelector(".close").addEventListener("click", closeModal);
-  veil.addEventListener("click", e => { if (e.target === veil) closeModal(); });
+  // veil-background-click is handled once by the central handler installed
+  // in mountWorkspace — see initVeilCloseHandler. Per-opener handlers used
+  // to accumulate (each open added one and never removed), causing subtle
+  // double-close bugs (and the Ch0→Ch1 tutorial soft-lock).
 }
 
 // ============================================================
@@ -2391,7 +2495,10 @@ function openSettings() {
     if (confirm("确定要清空所有进度，回到开始画面吗？")) reset();
   });
   m.querySelector("#btn-show-report").addEventListener("click", () => { closeModal(); openCaseReport(); });
-  veil.addEventListener("click", e => { if (e.target === veil) closeModal(); });
+  // veil-background-click is handled once by the central handler installed
+  // in mountWorkspace — see initVeilCloseHandler. Per-opener handlers used
+  // to accumulate (each open added one and never removed), causing subtle
+  // double-close bugs (and the Ch0→Ch1 tutorial soft-lock).
 }
 
 // ============================================================
@@ -2404,6 +2511,20 @@ function runRows(sql) {
     return r[0].values;
   } catch (e) {
     console.warn("runRows fail:", e); return [];
+  }
+}
+// Parameterized version — use this when interpolating user-controlled
+// strings into SQL (avoids ad-hoc quote escaping). Returns rows as arrays.
+function runRowsP(sql, params) {
+  try {
+    const st = BMM2.db.prepare(sql);
+    st.bind(params || []);
+    const out = [];
+    while (st.step()) out.push(st.get());
+    st.free();
+    return out;
+  } catch (e) {
+    console.warn("runRowsP fail:", e); return [];
   }
 }
 function esc(s) {

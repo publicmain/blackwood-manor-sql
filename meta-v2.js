@@ -213,7 +213,7 @@ ORDER BY StartTime;`,
     brennanIntro:
 `薇薇安 之后发了什么短信？`,
     brennanOutro:
-`二十四分钟后，她给律师发了："已经取回。那份草约重新回到我手里了。"
+`凌晨 00:54，她给律师发了："已经取回。那份草约重新回到我手里了。"
 "取回"——是"它"，单数。她拿的不是酒。她拿的是藏在酒窖里的东西。
 哪份合同？查 Contracts 表。`,
     grade: { anyContains: "取回" },
@@ -468,7 +468,7 @@ WHERE HasCCTV = ___;`,
     brennanOutro:
 `书房。档案室。连接两者的走廊。
 任何人从档案室经连接门进书房——完全不会被录。`,
-    grade: { anyContainsCI: "Study" },
+    grade: { anyContainsCI: "书房" },
     rewards: { score: 8 }
   },
   {
@@ -1132,6 +1132,12 @@ window.BMM2_BRIEF = {
 // set in the first place — no matter which columns the user selects.
 // ============================================================
 window.BMM2_filterQuery = function (rawQuery, state) {
+  // Reset side-channel hint so the previous query's hint doesn't leak.
+  // runQuery reads window.__bmFilterHint after calling us, and surfaces
+  // it in the result banner so the student understands why the table
+  // looks empty / shorter than expected.
+  window.__bmFilterHint = "";
+  const hints = [];
   const q = String(rawQuery || "");
   const ql = q.toLowerCase();
   const ch9Done = state.completedTasks && state.completedTasks.includes("9.3");
@@ -1142,16 +1148,19 @@ window.BMM2_filterQuery = function (rawQuery, state) {
   //     OR Ch9 completed.  The whole row vanishes from any SELECT, JOIN,
   //     COUNT, etc. against FamilyTree.
   if (!ch9Done && ql.indexOf("sealed_adoption") < 0) {
+    const before = out;
     out = out.replace(
       /\bFamilyTree\b/gi,
       "(SELECT RecordID, PersonID, RelatedPersonID, RelationType, RecordStatus, EffectiveYear FROM FamilyTree WHERE RecordStatus != 'Sealed_Adoption')"
     );
+    if (out !== before) hints.push("FamilyTree 里有些记录被「封存」，要等第 9 章查到那条线索后才会现身——现在看到的只是公开部分。");
   }
 
   // (2) WritingSoftwareLog → until Ch10 completes, mask the Memo preview
   //     text AND the actor of the Delete event (PerformedByPersonID = 7
   //     would otherwise spoil the killer). Same column shape preserved.
   if (!ch10Done) {
+    const before = out;
     out = out.replace(
       /\bWritingSoftwareLog\b/gi,
       "(SELECT LogID, EventTime, Action, FileName, CharCount, " +
@@ -1159,6 +1168,7 @@ window.BMM2_filterQuery = function (rawQuery, state) {
       "CASE WHEN Action = 'Delete' THEN NULL ELSE PerformedByPersonID END AS PerformedByPersonID " +
       "FROM WritingSoftwareLog)"
     );
+    if (out !== before) hints.push("WritingSoftwareLog 里某些备忘录还没解密，删除操作的执行者也暂时空着——第 10 章完成后就齐了。");
   }
 
   // (3) PhysicalEvidence → forensic lab results are not available until the
@@ -1166,11 +1176,14 @@ window.BMM2_filterQuery = function (rawQuery, state) {
   //     as empty ("evidence still in processing"), so a curious early
   //     SELECT * can't reveal the bookend → 埃莉诺 match.
   if (!ch10Done) {
+    const before = out;
     out = out.replace(
       /\bPhysicalEvidence\b/gi,
       "(SELECT EvidenceID, ItemName, FoundInRoomID, CollectedTime, Analysis, MatchedPersonID FROM PhysicalEvidence WHERE 1 = 0)"
     );
+    if (out !== before) hints.push("PhysicalEvidence（鉴证科物证）还在化验中，要到第 10 章结束后才会出结果——不是你 WHERE 写错。");
   }
+  if (hints.length) window.__bmFilterHint = hints.join(" ");
   return out;
 };
 

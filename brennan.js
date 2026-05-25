@@ -90,7 +90,20 @@
     ["Margaret Blackwood", 14, "玛格丽特·布莱克伍德"],
     ["Margaret", 14, "玛格丽特"],
     ["玛格丽特·布莱克伍德", 14, "玛格丽特·布莱克伍德"],
-    ["玛格丽特", 14, "玛格丽特"]
+    ["玛格丽特", 14, "玛格丽特"],
+    ["Charles Blackwood", 15, "查尔斯·布莱克伍德"],
+    ["查尔斯·布莱克伍德", 15, "查尔斯·布莱克伍德"],
+    ["查尔斯", 15, "查尔斯"],
+    ["Henrietta Blackwood", 16, "亨丽埃塔·布莱克伍德"],
+    ["亨丽埃塔·布莱克伍德", 16, "亨丽埃塔·布莱克伍德"],
+    ["亨丽埃塔", 16, "亨丽埃塔"],
+    ["Robert Wright", 17, "罗伯特·赖特"],
+    ["罗伯特·赖特", 17, "罗伯特·赖特"],
+    ["罗伯特", 17, "罗伯特"],
+    ["Patricia Wright", 18, "帕特里夏·赖特"],
+    ["帕特里夏·赖特", 18, "帕特里夏·赖特"],
+    ["Patricia", 18, "帕特里夏"],
+    ["帕特里夏", 18, "帕特里夏"]
   ];
   function nmEsc(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
   // Longest patterns first so "Marcus Thorne" wins over "Marcus".
@@ -250,7 +263,23 @@
     await type(el, text, opts);
   }
 
+  // Decorate a plain string into HTML with person-ref spans + escaped text,
+  // ready to drop into .innerHTML. Used by workspace.js for the dossier bio
+  // so the same hover-card pattern works inside the suspect modal.
+  function decorate(text) {
+    const tagged = applyNames(String(text == null ? "" : text));
+    let html = "", last = 0, m;
+    TOK_RE.lastIndex = 0;
+    while ((m = TOK_RE.exec(tagged)) !== null) {
+      html += escHTML(tagged.slice(last, m.index));
+      html += '<span class="person-ref" data-pid="' + m[1] + '">' + escHTML(m[2]) + '</span>';
+      last = TOK_RE.lastIndex;
+    }
+    html += escHTML(tagged.slice(last));
+    return html;
+  }
+
   window.BMM2_brennan = {
-    type, fadeAndType, skip
+    type, fadeAndType, skip, decorate
   };
 })();

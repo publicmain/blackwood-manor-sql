@@ -1844,6 +1844,66 @@ input, textarea { user-select: text; }
   }
 }
 
+/* Keyboard focus — the dark theme nearly hides the browser default. Make
+   focus visible to anyone navigating with the keyboard. */
+*:focus-visible {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: 2px;
+  border-radius: 1px;
+}
+
+/* ============================================================
+   Responsive — Chinese high-school laptops are often 1366×768 or
+   smaller. Tighten the rails before the center column gets crushed,
+   and stack everything on tablets/phones.
+   ============================================================ */
+@media (max-width: 1366px) {
+  :root {
+    --left-w:   220px;
+    --right-w:  280px;
+    --terminal-h: 200px;
+  }
+  .topbar .case-tag { font-size: 11px; }
+  .topbar .tools button { padding: 4px 9px; font-size: 11px; }
+  .right-rail .speech { font-size: 14px; }
+  .cast-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+}
+@media (max-width: 1100px) {
+  :root {
+    --left-w:   200px;
+    --right-w:  250px;
+    --terminal-h: 190px;
+  }
+  .suspect-strip { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+  .task-card { font-size: 12.5px; }
+  .right-rail .brennan-photo { width: 52px; height: 64px; }
+  .right-rail .speech { font-size: 13.5px; }
+}
+@media (max-width: 900px) {
+  /* On true tablets/phones the 3-col layout is no longer viable. Stack the
+     left rail under the center, right rail under that, terminal at bottom.
+     Players can still complete tasks; the layout just goes vertical. */
+  body { overflow: auto; }
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-rows: var(--topbar-h) auto auto auto var(--terminal-h);
+    grid-template-areas:
+      "top"
+      "center"
+      "left"
+      "right"
+      "term";
+    height: auto;
+    min-height: 100vh;
+  }
+  .left-rail, .right-rail, .board { max-height: none; }
+  .clue-list { max-height: 320px; }
+  .case-dashboard { grid-template-columns: 1fr; }
+  .task-card { position: static; width: auto; margin: 12px; }
+  .result-panel { left: 0; right: 0; }
+  .continue-gate-bar { left: 50%; }
+}
+
 /* Caret blink for typewriter */
 .caret { display: inline-block; width: 8px; height: 1em;
   background: var(--accent-gold); margin-left: 2px; vertical-align: -2px;

@@ -258,11 +258,6 @@
         </div>
 
         <div class="section">
-          <h3>侦探笔记摘录</h3>
-          <div style="font-family: var(--font-script); font-size: 17px; color: var(--text-primary); line-height: 1.6; padding: 18px; background: var(--bg-card); border: 1px solid var(--border-subtle); white-space: pre-wrap;">${esc((window.BMM2.state.notes || "").trim() || "（笔记为空。）")}</div>
-        </div>
-
-        <div class="section">
           <h3>献辞</h3>
           <div class="dedication">
             <img src="portraits/Margaret.png" alt="玛格丽特·布莱克伍德" loading="lazy" decoding="async"/>
