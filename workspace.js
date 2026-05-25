@@ -1487,6 +1487,13 @@ function runQuery() {
   } catch (err) {
     BMM2.state.stats.errors++;
     save();
+    // Clear stale result body so the student isn't confused by the previous
+    // query's table sitting under the new error.
+    const body = document.getElementById("result-body");
+    if (body) body.innerHTML = "";
+    const meta = document.getElementById("result-meta");
+    if (meta) meta.textContent = "执行出错";
+    showResultBanner(err.message, "error", hintForSqlError(err.message, sql));
     showToast("❌ " + err.message, "err");
     brennanReact("语法没对。再读一遍 schema。");
     return;
@@ -1495,22 +1502,34 @@ function runQuery() {
   save();
   let last = results[results.length - 1];
   if (!last) {
+    showResultBanner("SQL 执行了，但没返回结果集（多半是写成了 CREATE / UPDATE 等）。", "warn",
+                     "这关需要 SELECT。把语句改成 SELECT ... FROM ... 再试。");
     showToast("✓ 语句执行成功，无结果集。", "warn");
     brennanReact("空集。表里没那种行。换个角度。");
     return;
   }
   if (!last.values.length) {
+    // Show the empty table (with the columns the student SELECTed) so they
+    // can see "I asked for these columns, got 0 rows" — and the banner
+    // tells them *why* it might be 0.
+    showResultPanel(last.columns, []);
+    showResultBanner("查询返回 0 行。", "empty", hintForEmptyResult(sql));
     showToast("⚠ 查询无结果。再想想？", "warn");
     brennanReact("查到 0 行。WHERE 条件可能太严了。");
     return;
   }
   if (last.values.length > 100) {
     showToast(`⚠ 结果 ${last.values.length} 行，已截至前 50。请加 WHERE。`, "warn");
-    last = { columns: last.columns, values: last.values.slice(0, 50) };
+    const trunc = { columns: last.columns, values: last.values.slice(0, 50) };
+    showResultPanel(trunc.columns, trunc.values);
+    showResultBanner(`查询返回 ${last.values.length} 行，太多了——下方只显示前 50 行。`, "warn",
+                     "用 WHERE 加更具体的过滤，或加 LIMIT 收窄范围。返回太多行通常说明 WHERE 太宽了。");
+    last = trunc;
+  } else {
+    // Show the actual result table to the student (floating panel above the
+    // terminal). Auto-replaces previous result; closeable.
+    showResultPanel(last.columns, last.values);
   }
-  // Show the actual result table to the student (floating panel above the
-  // terminal). Auto-replaces previous result; closeable.
-  showResultPanel(last.columns, last.values);
   // Cards
   const added = addClues(last.columns, last.values);
   // Grade
@@ -1531,7 +1550,7 @@ function runQuery() {
   } else {
     // Persistent fail banner on the result panel so the student doesn't
     // miss the (3.5s) toast and sit there wondering why nothing advanced.
-    showResultFail(verdict.why);
+    showResultBanner(verdict.why, "fail", hintForGraderFail(verdict.why));
     showToast(`✗ 还没过 · ${verdict.why}`, "warn");
   }
 }
@@ -1656,34 +1675,81 @@ function showResultGain(taskId) {
   gainEl.style.display = "block";
 }
 
-// Persistent "still wrong, here's why" banner on the result panel. The
-// 3.5s toast is too easy to miss — a weak-comprehension player sits there
-// staring at their own result wondering why nothing advanced. This panel
-// stays put until the next query, and translates the grader's terse
-// reason into something actionable.
-function showResultFail(why) {
+// Persistent banner on the result panel. The 3.5s toasts are too easy to
+// miss — a weak-comprehension player sits there staring at their query
+// wondering why nothing advanced. This panel stays put until the next
+// query, translates terse reasons into actionable hints, and is used for
+// ALL critical feedback paths: grade-fail, SQL syntax error, 0 rows,
+// empty result set, row-cap truncation.
+const BANNER_KINDS = {
+  fail:  { tag: "✗ 还没过",      cls: "rb-fail"  },
+  empty: { tag: "⚠ 0 行结果",   cls: "rb-warn"  },
+  error: { tag: "❌ SQL 出错",   cls: "rb-error" },
+  warn:  { tag: "⚠ 注意",        cls: "rb-warn"  }
+};
+function showResultBanner(text, kind, hint) {
   const el = document.getElementById("result-fail");
   if (!el) return;
-  let hint = "";
-  if (/结果中应有包含/.test(why || "")) {
-    hint = "通常是 SELECT 的列少选了——想想这个值属于哪一列，把那一列也 SELECT 出来。";
-  } else if (/期望.*?行|至少需要.*?行|应为.*?行/.test(why || "")) {
-    hint = "行数对不上。WHERE 条件可能太严（行太少）或太宽（行太多），再核一下范围。";
-  } else if (/首行首列/.test(why || "")) {
-    hint = "首行首列对不上——可能是没有 ORDER BY，或排序方向反了。";
-  } else if (/查到的(?:好像)?不是正确的那些行|返回的值大多不在标准答案里/.test(why || "")) {
-    hint = "行数对了但行内容不对——WHERE / JOIN 条件可能写错了，对照题面里的过滤条件再核一遍。";
-  } else if (/缺列/.test(why || "")) {
-    hint = "SELECT 里少了一列。题面要求的每一列都不能缺。";
-  }
+  const k = BANNER_KINDS[kind] || BANNER_KINDS.fail;
+  el.className = "result-fail " + k.cls;
   el.innerHTML =
-    `<span class="rf-tag">✗ 还没过</span>${esc(why || "")}` +
+    `<span class="rf-tag">${k.tag}</span>${esc(text || "")}` +
     (hint ? `<div class="rf-hint">${esc(hint)}</div>` : "");
   el.style.display = "block";
+  // Make sure the panel is open — for SQL-error / empty-result paths the
+  // panel might not have been opened by showResultPanel(), so the banner
+  // would be hidden inside a collapsed panel.
+  const panel = document.getElementById("result-panel");
+  if (panel && !panel.classList.contains("open")) {
+    panel.classList.add("open");
+    panel.setAttribute("aria-hidden", "false");
+  }
 }
 function hideResultFail() {
   const el = document.getElementById("result-fail");
-  if (el) el.style.display = "none";
+  if (el) { el.style.display = "none"; el.className = "result-fail"; }
+}
+// Smart hint generator — looks at the message + the SQL the student ran
+// and suggests the most likely fix. The hints have to be specific enough
+// to actually help a weak student, not just restate the problem.
+function hintForGraderFail(why) {
+  if (/结果中应有包含/.test(why)) return "SELECT 的列可能少了——想想这个值该来自哪一列，把那列也 SELECT 出来。";
+  if (/期望.*?行|至少需要.*?行|应为.*?行/.test(why)) return "行数对不上。WHERE 条件可能太严（行太少）或太宽（行太多），再核一下过滤范围。";
+  if (/首行首列/.test(why)) return "首行的值对不上——可能是没有 ORDER BY，或排序方向反了。";
+  if (/查到的(?:好像)?不是正确的那些行|返回的值大多不在标准答案里/.test(why)) return "行数对了但行内容不对——WHERE / JOIN 条件可能写错了，对照题面里的过滤条件再核一遍。";
+  if (/缺列/.test(why)) return "SELECT 里少了一列。题面要求的每一列都不能缺。";
+  return "";
+}
+function hintForSqlError(errMsg, sql) {
+  const m = String(errMsg).toLowerCase();
+  if (/no such column/.test(m)) {
+    const col = (errMsg.match(/no such column:\s*(\S+)/i) || [])[1];
+    return `字段名「${col || "?"}」拼错了，或者这张表没有这列。点顶栏「📂 案件资料」→「数据表」可以查每张表的列名。`;
+  }
+  if (/no such table/.test(m)) {
+    const tbl = (errMsg.match(/no such table:\s*(\S+)/i) || [])[1];
+    return `表名「${tbl || "?"}」拼错了。点顶栏「📂 案件资料」→「数据表」可以查全部表名（注意大小写：KeycardAccess 不是 keycardaccess）。`;
+  }
+  if (/syntax error/.test(m)) return "SQL 写法不对——逐句检查括号、单引号、逗号、分号是不是配齐了。";
+  if (/ambiguous column/.test(m)) return "有列同名却没指明属于哪张表——给列加上表别名前缀，比如 p.PersonID 而不是 PersonID。";
+  if (/no such function/.test(m)) return "函数名写错了，或者这个数据库不支持。常用：COUNT、MAX、MIN、SUM、AVG、LIKE。";
+  return "";
+}
+function hintForEmptyResult(sql) {
+  const s = String(sql);
+  // BETWEEN with HH:MM only (no date) — classic Ch2 trap
+  if (/BETWEEN\s*'(?!\d{4})[^']*:[^']*'/i.test(s)) {
+    return "时间过滤要带完整日期，写成 '2024-10-20 00:30' 这样，不能只写 '00:30'。";
+  }
+  // LIKE without %
+  if (/LIKE\s*'[^%']+'/i.test(s)) {
+    return "LIKE 要配通配符 %：找包含某个词写成 LIKE '%ruin%'。";
+  }
+  // = with a string that has a stray space
+  if (/=\s*'\s+[^']+'/.test(s) || /=\s*'[^']+\s+'/.test(s)) {
+    return "等号比较时，字符串前后多了空格，去掉再试。";
+  }
+  return "WHERE 条件可能太严了——把某一条过滤暂时去掉看看返回了什么，再慢慢加回去。";
 }
 
 // Helper: have 布伦南 say a short reaction line.

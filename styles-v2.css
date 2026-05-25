@@ -579,6 +579,11 @@ input, textarea { user-select: text; }
   font-family: var(--font-serif); font-size: 12px;
   color: var(--text-secondary); margin-top: 5px; line-height: 1.55;
 }
+/* Kind variants — banner used for grade-fail (red), 0 rows / truncation (amber), SQL error (deeper red). */
+.result-fail.rb-warn  { background: rgba(184, 153, 104, 0.18); }
+.result-fail.rb-warn  .rf-tag { color: #e1c184; }
+.result-fail.rb-error { background: rgba(176, 71, 58, 0.22); }
+.result-fail.rb-error .rf-tag { color: #ed8d80; }
 
 /* Story-first skip — always available so the SQL never blocks the story. */
 #task-skip-story {
